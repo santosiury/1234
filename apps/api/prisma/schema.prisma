@@ -1,0 +1,8 @@
+// No business models or migrations in phase 1.
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "sqlserver"
+  url = env("DATABASE_URL")
+}

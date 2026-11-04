@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "Omini",
+    "slug": "omini",
+    "version": "0.1.0",
+    "scheme": "omini",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.omini.app"
+    },
+    "android": {
+      "package": "com.omini.app"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
