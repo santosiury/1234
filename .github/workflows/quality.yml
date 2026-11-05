@@ -2,7 +2,7 @@ name: Quality
 on:
   pull_request:
   push:
-    branches: [main, feature/fase-1-fundacao-mobile]
+    branches: [main, feature/fase-1-fundacao-mobile, fix/expo-sdk-58-ios]
 permissions:
   contents: read
 jobs:
@@ -22,6 +22,7 @@ jobs:
       - run: npm run check:routes
       - run: npm run check:secrets
       - run: npm run check:dependencies -w @omini/mobile
+      - run: npm run doctor -w @omini/mobile
       - run: npm run prisma:validate -w @omini/api
         env:
           DATABASE_URL: "sqlserver://127.0.0.1:1433;database=omini;user=PLACEHOLDER;password={PLACEHOLDER};encrypt=true;trustServerCertificate=true"

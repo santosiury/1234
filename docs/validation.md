@@ -1,4 +1,6 @@
-# Evidências de validação — Fase 1
+# Evidências históricas de validação — Fase 1 / SDK 55
+
+Este registro descreve a entrega original. Para a atualização atual e suas pendências, consulte [Expo SDK 58](expo-sdk-58.md).
 
 Validação na máquina Linux da nuvem, Node 24.22.1 / npm 11.9.0. Não equivale a validação em Windows ou aparelho físico.
 
