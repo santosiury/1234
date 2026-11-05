@@ -1,4 +1,5 @@
-import { Tabs, Redirect } from "expo-router";
+import { Redirect } from "expo-router";
+import { Tabs } from "expo-router/js-tabs";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMode } from "../../src/mode";
 import { theme } from "../../src/theme";
@@ -19,8 +20,12 @@ export default function Layout() {
         name="index"
         options={{
           title: "Início",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="home-outline"
+              color={focused ? theme.colors.primary : theme.colors.muted}
+              size={size}
+            />
           ),
         }}
       />
@@ -28,8 +33,12 @@ export default function Layout() {
         name="search"
         options={{
           title: "Buscar",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="search-outline"
+              color={focused ? theme.colors.primary : theme.colors.muted}
+              size={size}
+            />
           ),
         }}
       />
@@ -37,8 +46,12 @@ export default function Layout() {
         name="categories"
         options={{
           title: "Categorias",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="grid-outline"
+              color={focused ? theme.colors.primary : theme.colors.muted}
+              size={size}
+            />
           ),
         }}
       />
@@ -46,8 +59,12 @@ export default function Layout() {
         name="requests"
         options={{
           title: "Solicitações",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="chatbubbles-outline"
+              color={focused ? theme.colors.primary : theme.colors.muted}
+              size={size}
+            />
           ),
         }}
       />
@@ -55,8 +72,12 @@ export default function Layout() {
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="person-outline"
+              color={focused ? theme.colors.primary : theme.colors.muted}
+              size={size}
+            />
           ),
         }}
       />

@@ -37,46 +37,46 @@ const routes = {
   "+not-found": R14,
 };
 test("client navigation, search, details, back and mode switching", async () => {
-  renderRouter(routes);
-  fireEvent.press(screen.getByText("Explorar como cliente"));
+  await renderRouter(routes);
+  await fireEvent.press(screen.getByText("Explorar como cliente"));
   expect(await screen.findByText("De que você precisa hoje?")).toBeTruthy();
-  testRouter.push("/client/categories");
-  fireEvent.press(screen.getByText("Eletricista"));
+  await testRouter.push("/client/categories");
+  await fireEvent.press(screen.getByText("Eletricista"));
   expect(await screen.findByText("1 perfis de exemplo")).toBeTruthy();
-  fireEvent.press(
+  await fireEvent.press(
     screen.getByLabelText("Ver perfil demonstrativo de Ana Martins"),
   );
   expect(await screen.findByText("Sobre o profissional")).toBeTruthy();
   expect(screen.getByText("Solicitar atendimento · em breve")).toBeDisabled();
-  fireEvent.press(screen.getByLabelText("Voltar"));
+  await fireEvent.press(screen.getByLabelText("Voltar"));
   expect(await screen.findByText("Encontre seu profissional")).toBeTruthy();
-  fireEvent.changeText(
+  await fireEvent.changeText(
     screen.getByLabelText("Buscar por nome, especialidade ou bairro"),
     "inexistente",
   );
   expect(await screen.findByText("Nenhum perfil de exemplo")).toBeTruthy();
-  testRouter.push("/client/requests");
+  await testRouter.push("/client/requests");
   expect(
     await screen.findByText("Nenhuma solicitação nesta demonstração"),
   ).toBeTruthy();
-  testRouter.push("/client/profile");
-  fireEvent.press(screen.getByText("Mudar para prestador"));
+  await testRouter.push("/client/profile");
+  await fireEvent.press(screen.getByText("Mudar para prestador"));
   expect(await screen.findByText("Seu talento faz a diferença.")).toBeTruthy();
-  fireEvent(
+  await fireEvent(
     screen.getByLabelText("Disponibilidade demonstrativa"),
     "valueChange",
     true,
   );
   expect(screen.getByText("Disponível na demonstração")).toBeTruthy();
-  testRouter.push("/provider/requests");
+  await testRouter.push("/provider/requests");
   expect(await screen.findByText("Solicitações recebidas")).toBeTruthy();
-  testRouter.push("/provider/services");
+  await testRouter.push("/provider/services");
   expect(await screen.findByText("Cadastro de serviços em breve")).toBeTruthy();
-  testRouter.push("/provider/profile");
-  fireEvent.press(screen.getByText("Mudar para cliente"));
+  await testRouter.push("/provider/profile");
+  await fireEvent.press(screen.getByText("Mudar para cliente"));
   expect(await screen.findByText("De que você precisa hoje?")).toBeTruthy();
 });
 test("deep link cannot silently enter a demo mode", async () => {
-  renderRouter(routes, { initialUrl: "/provider/services" });
+  await renderRouter(routes, { initialUrl: "/provider/services" });
   expect(await screen.findByText("Explorar como cliente")).toBeTruthy();
 });
