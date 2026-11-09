@@ -7,23 +7,33 @@
     "start": "node dist/main.js",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "tsx --test test/*.test.ts",
-    "prisma:validate": "prisma validate",
-    "db:check": "tsx scripts/check-database.ts"
+    "test": "tsx scripts/test.ts",
+    "prisma:validate": "tsx scripts/prisma-tools.ts validate",
+    "db:check": "tsx scripts/check-database.ts",
+    "prisma:generate": "tsx scripts/prisma-tools.ts generate",
+    "prisma:generate:cli": "prisma generate",
+    "db:migrate:status": "tsx scripts/migrate.ts status",
+    "db:migrate:deploy": "tsx scripts/migrate.ts deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "check:migrations": "tsx scripts/check-migrations.ts",
+    "postinstall": "npm run prisma:generate"
   },
   "dependencies": {
-    "@omini/shared": "0.1.0",
     "@nestjs/common": "^11.2.8",
+    "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.2.8",
     "@nestjs/platform-express": "^11.2.8",
-    "@nestjs/config": "^4.0.2",
     "@nestjs/swagger": "^11.0.0",
+    "@omini/shared": "0.1.0",
+    "@prisma/adapter-mssql": "6.19.3",
     "@prisma/client": "6.19.3",
+    "dotenv": "^17.4.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/testing": "^11.2.8",
+    "@prisma/internals": "6.19.3",
     "prisma": "6.19.3",
     "tsx": "^4.20.0"
   }

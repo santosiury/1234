@@ -12,7 +12,7 @@ export function configureApp(app: INestApplication) {
   const spec = new DocumentBuilder()
     .setTitle("Omini API")
     .setDescription(
-      "Phase 1 · liveness only. No authentication or hiring endpoints.",
+      "Omini foundation · process liveness. Development-only database diagnostics are excluded from the public specification. No authentication or hiring endpoints.",
     )
     .setVersion("0.1.0")
     .build();

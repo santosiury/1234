@@ -14,5 +14,30 @@ export function validateEnvironment(env: Record<string, unknown>) {
     )
       throw new Error("CORS_ORIGINS must contain comma-separated HTTP origins");
   }
-  return { ...env, PORT: port, CORS_ORIGINS: origins };
+  const flag = (name: string) => {
+    const value = env[name] ?? "false";
+    if (value !== "true" && value !== "false")
+      throw new Error(`${name} must be true or false`);
+    return value === "true";
+  };
+  const persistence = flag("PERSISTENCE_ENABLED");
+  if (
+    persistence &&
+    (typeof env.DATABASE_URL !== "string" ||
+      !env.DATABASE_URL.startsWith("sqlserver://"))
+  )
+    throw new Error(
+      "DATABASE_URL must be configured for SQL Server when persistence is enabled",
+    );
+  const nodeEnv = String(env.NODE_ENV ?? "development");
+  if (!["development", "test", "production"].includes(nodeEnv))
+    throw new Error("Invalid NODE_ENV");
+  return {
+    ...env,
+    PORT: port,
+    CORS_ORIGINS: origins,
+    NODE_ENV: nodeEnv,
+    PERSISTENCE_ENABLED: persistence,
+    DB_DIAGNOSTICS_ENABLED: flag("DB_DIAGNOSTICS_ENABLED"),
+  };
 }

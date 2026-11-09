@@ -1,8 +1,94 @@
-// No business models or migrations in phase 1.
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  output     = "../../../node_modules/.prisma/client"
+  engineType = "client"
 }
+
 datasource db {
   provider = "sqlserver"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  email           String           @unique @db.NVarChar(254)
+  displayName     String           @db.NVarChar(120)
+  phone           String?          @db.NVarChar(25)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  clientProfile   ClientProfile?
+  providerProfile ProviderProfile?
+
+  @@index([isActive, createdAt])
+}
+
+model ClientProfile {
+  id        String   @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  userId    String   @unique @db.UniqueIdentifier
+  city      String   @default("Araranguá") @db.NVarChar(100)
+  state     String   @default("SC") @db.Char(2)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model ProviderProfile {
+  id               String                @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  userId           String                @unique @db.UniqueIdentifier
+  professionalName String                @db.NVarChar(120)
+  bio              String?               @db.NVarChar(1000)
+  isActive         Boolean               @default(true)
+  createdAt        DateTime              @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt        DateTime              @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  user             User                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  services         ProviderService[]
+  serviceAreas     ProviderServiceArea[]
+
+  @@index([isActive, createdAt])
+}
+
+model ServiceCategory {
+  id        String            @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  slug      String            @unique @db.NVarChar(80)
+  name      String            @db.NVarChar(80)
+  sortOrder Int               @default(0)
+  isActive  Boolean           @default(true)
+  createdAt DateTime          @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime          @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  services  ProviderService[]
+
+  @@index([isActive, sortOrder])
+}
+
+model ProviderService {
+  id          String          @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  providerId  String          @db.UniqueIdentifier
+  categoryId  String          @db.UniqueIdentifier
+  title       String          @db.NVarChar(120)
+  description String?         @db.NVarChar(1000)
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt   DateTime        @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category    ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([providerId, categoryId, title])
+  @@index([categoryId, isActive, providerId])
+}
+
+model ProviderServiceArea {
+  id           String          @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  providerId   String          @db.UniqueIdentifier
+  city         String          @db.NVarChar(100)
+  state        String          @db.Char(2)
+  neighborhood String          @default("") @db.NVarChar(100)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt    DateTime        @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  provider     ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([providerId, state, city, neighborhood])
+  @@index([state, city, isActive, providerId])
 }

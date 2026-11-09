@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present",
     "check:routes": "node scripts/check-routes.mjs",
-    "check:secrets": "node scripts/check-secrets.mjs"
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "prisma:generate": "npm run prisma:generate -w @omini/api"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

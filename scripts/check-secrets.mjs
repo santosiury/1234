@@ -9,7 +9,11 @@ const files = execFileSync(
   .filter(Boolean);
 const failures = [];
 for (const file of new Set(files)) {
-  if (/(^|\/)\.env($|\.)/.test(file) && !file.endsWith(".env.example"))
+  if (
+    /(^|\/)\.env($|\.)/.test(file) &&
+    !file.endsWith(".env.example") &&
+    !file.endsWith(".env.migrations.example")
+  )
     failures.push(file);
   const text = readFileSync(file, "utf8");
   if (
