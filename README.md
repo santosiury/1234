@@ -1,6 +1,6 @@
-# Omini · Fase 1
+# Omini · Fase 1 + fundação de persistência (2.1)
 
-Marketplace mobile de serviços para Araranguá, SC. **Um aplicativo Android/iOS, duas experiências demonstrativas.** Não há login, contas, contratação, avaliações ou profissionais reais. Não é PWA. O backend não depende do SQL Server para iniciar.
+Marketplace mobile de serviços para Araranguá, SC. **Um aplicativo Android/iOS, duas experiências demonstrativas.** Não há login, contas, contratação, avaliações ou profissionais reais. Não é PWA. O backend não depende do SQL Server para iniciar no modo demonstrativo. A fundação de persistência da Fase 2.1 está preparada; consulte [o guia de banco](docs/fase-2-1-persistencia.md) antes de qualquer deploy de migrations.
 
 ## Estrutura
 
@@ -15,7 +15,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
     test/                      # testes de navegação e busca
   apps/api/                    # NestJS 11, REST e Swagger
     src/health/                # módulo de liveness
-    prisma/schema.prisma       # provider sqlserver, sem modelos
+    prisma/                    # schema sqlserver, migration inicial e seed
     test/                      # HTTP, Swagger, erros, CORS e configuração
   packages/shared/             # contratos TypeScript, sem dependências de runtime
   scripts/                     # verificações de rotas e arquivos sensíveis
@@ -31,7 +31,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch fix/expo-sdk-58-ios
+git switch feature/fase-2-1-sqlserver-prisma
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env
@@ -89,6 +89,8 @@ npm run typecheck
 npm run lint
 npm test
 npm run build:api
+npm run prisma:validate -w @omini/api
+npm run check:migrations -w @omini/api
 npm run check:routes
 npm run check:secrets
 npm run check:dependencies -w @omini/mobile
@@ -101,7 +103,7 @@ Os exports verificam bundles Hermes, **não geram APK/IPA nem comprovam execuç�
 
 API compilada: `npm run build:api` e `npm start -w @omini/api`. Não exige `DATABASE_URL`. Endpoints: `/api/health`, `/docs`, `/docs-json`. CORS aceita por padrão `http://localhost:8081`; configure `CORS_ORIGINS` com origens HTTP exatas separadas por vírgula. Aplicativos nativos não dependem de CORS. O health informa somente vida do processo, sem indicar disponibilidade de banco.
 
-SQL Server opcional: consulte [configuração Windows](docs/sql-server-windows.md). Não execute migrations nesta fase.
+Persistência opcional: consulte [Fase 2.1 — configuração, permissões e migrations no Windows](docs/fase-2-1-persistencia.md). O banco existente é OminiDB; migrations só são aplicadas localmente após revisão, nunca no startup. A credencial runtime omini_app é separada de omini_migrator.
 
 ## Diagnóstico
 
@@ -115,4 +117,4 @@ SQL Server opcional: consulte [configuração Windows](docs/sql-server-windows.m
 
 ## Limites e segurança
 
-Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. Não há migrations, tabelas de negócio ou credenciais reais. A API não implementa autenticação, rate limit de produção ou endpoints de contratação; não a publique como produto final. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).
+Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. Há uma migration inicial versionada para seis entidades, ainda não aplicada por este ambiente; não há credenciais reais no repositório. A API não implementa autenticação, rate limit de produção ou endpoints de contratação; não a publique como produto final. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).
