@@ -1,6 +1,6 @@
-# Omini · Fase 1 + fundação de persistência (2.1)
+# Omini · Autenticação (Fase 2.2)
 
-Marketplace mobile de serviços para Araranguá, SC. **Um aplicativo Android/iOS, duas experiências demonstrativas.** Não há login, contas, contratação, avaliações ou profissionais reais. Não é PWA. O backend não depende do SQL Server para iniciar no modo demonstrativo. A fundação de persistência da Fase 2.1 está preparada; consulte [o guia de banco](docs/fase-2-1-persistencia.md) antes de qualquer deploy de migrations.
+Marketplace mobile de serviços para Araranguá, SC. **Um aplicativo Android/iOS, duas experiências demonstrativas.** Há cadastro, login e sessão segura; contratação e avaliações continuam indisponíveis, e o catálogo de profissionais permanece demonstrativo. Não é PWA. O backend não depende do SQL Server para iniciar no modo demonstrativo. A fundação de persistência da Fase 2.1 está preparada; consulte [o guia de banco](docs/fase-2-1-persistencia.md) antes de qualquer deploy de migrations.
 
 ## Estrutura
 
@@ -24,6 +24,8 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.2 — migration incremental, permissões, chave local e teste no iPhone](docs/fase-2-2-autenticacao.md). As instruções abaixo permitem instalar e explorar o modo demonstrativo; autenticação exige as flags e permissões do novo guia.
+
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 
 Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não misture gerenciadores. No iPhone, o desenvolvimento com Expo Go funciona no Windows; builds nativos iOS locais exigem macOS/Xcode.
@@ -31,7 +33,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch feature/fase-2-1-sqlserver-prisma
+git switch feature/fase-2-2-autenticacao
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env
@@ -76,7 +78,7 @@ npm run dev:mobile -- --clear
 4. Solicitações mostra indisponibilidade, sem criar registros.
 5. Perfil → Testar conexão (health check real da sua API).
 6. Perfil → **Mudar para prestador** → painel, disponibilidade demonstrativa, recebidas, serviços e perfil.
-7. No perfil profissional, alterne de volta a cliente. Reiniciar o app volta à entrada demonstrativa; nenhuma sessão de autenticação é persistida.
+7. No perfil profissional, alterne de volta a cliente. Sem login, reiniciar volta à entrada demonstrativa. Contas autenticadas restauram a sessão com Expo SecureStore; veja o roteiro da Fase 2.2.
 
 A disponibilidade é apenas estado local do painel e reinicia quando o modo prestador é encerrado. Não altera nenhum profissional real.
 
@@ -117,4 +119,4 @@ Persistência opcional: consulte [Fase 2.1 — configuração, permissões e mig
 
 ## Limites e segurança
 
-Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. Há uma migration inicial versionada para seis entidades, ainda não aplicada por este ambiente; não há credenciais reais no repositório. A API não implementa autenticação, rate limit de produção ou endpoints de contratação; não a publique como produto final. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).
+Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. Há uma migration inicial versionada para seis entidades, ainda não aplicada por este ambiente; não há credenciais reais no repositório. A API implementa autenticação e rate limiting por processo, sem contratação. Antes de implantação, valide SQL/iPhone e configure HTTPS; múltiplas instâncias exigem limite compartilhado. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).

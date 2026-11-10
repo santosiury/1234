@@ -8,6 +8,7 @@ on:
         feature/fase-1-fundacao-mobile,
         fix/expo-sdk-58-ios,
         feature/fase-2-1-sqlserver-prisma,
+        feature/fase-2-2-autenticacao,
       ]
 permissions:
   contents: read
