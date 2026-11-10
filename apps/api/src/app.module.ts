@@ -1,3 +1,4 @@
+import { AuthModule } from "./auth/auth.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { HealthModule } from "./health/health.module";
@@ -12,6 +13,7 @@ import { validateEnvironment } from "./config";
     }),
     HealthModule,
     PersistenceModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

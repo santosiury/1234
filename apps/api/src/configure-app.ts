@@ -12,9 +12,10 @@ export function configureApp(app: INestApplication) {
   const spec = new DocumentBuilder()
     .setTitle("Omini API")
     .setDescription(
-      "Omini foundation · process liveness. Development-only database diagnostics are excluded from the public specification. No authentication or hiring endpoints.",
+      "Omini foundation · process liveness. Development-only database diagnostics are excluded from the public specification. Authentication enabled explicitly; no hiring endpoints.",
     )
-    .setVersion("0.1.0")
+    .addBearerAuth()
+    .setVersion("0.2.2")
     .build();
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, spec));
 }

@@ -2,6 +2,9 @@ import { existsSync, readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 const root = new URL("../apps/mobile/app/", import.meta.url);
 const routes = [
+  "login",
+  "register",
+  "account",
   "index",
   "_layout",
   "client/_layout",

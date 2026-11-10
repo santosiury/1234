@@ -1,3 +1,4 @@
+import { useSession } from "../../src/auth/session";
 import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -5,8 +6,21 @@ import { useMode } from "../../src/mode";
 import { theme } from "../../src/theme";
 export default function Layout() {
   const { mode } = useMode();
+  const { state } = useSession();
   if (mode !== "client")
-    return <Redirect href={mode === null ? "/" : "/provider"} />;
+    return (
+      <Redirect
+        href={
+          mode === null
+            ? state.user
+              ? "/account"
+              : state.status === "expired"
+                ? "/login"
+                : "/"
+            : "/provider"
+        }
+      />
+    );
   return (
     <Tabs
       screenOptions={{

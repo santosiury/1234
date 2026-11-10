@@ -3,7 +3,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { validateInitialMigration } from "../scripts/migration-validation";
 test("initial SQL agrees with Prisma and rejects destructive/constraint regressions", async () => {
-  const schema = await readFile("prisma/schema.prisma", "utf8");
+  const schema = await readFile(
+    "prisma/history/phase21.prisma.snapshot",
+    "utf8",
+  );
   const sql = await readFile(
     "prisma/migrations/20261109000000_persistence_foundation/migration.sql",
     "utf8",

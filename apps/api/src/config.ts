@@ -32,8 +32,19 @@ export function validateEnvironment(env: Record<string, unknown>) {
   const nodeEnv = String(env.NODE_ENV ?? "development");
   if (!["development", "test", "production"].includes(nodeEnv))
     throw new Error("Invalid NODE_ENV");
+  const auth = flag("AUTH_ENABLED");
+  if (
+    auth &&
+    (!persistence ||
+      typeof env.JWT_ACCESS_SECRET !== "string" ||
+      Buffer.byteLength(env.JWT_ACCESS_SECRET.trim()) < 48)
+  )
+    throw new Error(
+      "AUTH_ENABLED requires persistence and JWT_ACCESS_SECRET with at least 48 bytes",
+    );
   return {
     ...env,
+    AUTH_ENABLED: auth,
     PORT: port,
     CORS_ORIGINS: origins,
     NODE_ENV: nodeEnv,

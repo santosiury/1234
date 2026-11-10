@@ -1,8 +1,19 @@
 import assert from "node:assert/strict";
 import { getDMMF } from "@prisma/internals";
 // Static contract check for the initial additive migration, NOT a SQL execution test.
-export async function validateInitialMigration(schema: string, sql: string) {
-  const { datamodel } = await getDMMF({ datamodel: schema });
+export async function validateInitialMigration(
+  schema: string,
+  sql: string,
+  names?: string[],
+) {
+  const { datamodel: full } = await getDMMF({ datamodel: schema });
+  const datamodel = names
+    ? {
+        ...full,
+        models: full.models.filter((model) => names.includes(model.name)),
+        indexes: full.indexes.filter((index) => names.includes(index.model)),
+      }
+    : full;
   assert.doesNotMatch(
     sql,
     /^\s*(?:DROP|TRUNCATE|DELETE|UPDATE|MERGE|USE|CREATE DATABASE|ALTER DATABASE)\b/gim,

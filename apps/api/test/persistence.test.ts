@@ -19,21 +19,26 @@ import { validateEnvironment } from "../src/config";
 import { parseSqlServerUrl } from "../src/persistence/sqlserver-url";
 function fakeClient(fail: boolean) {
   const calls = { connected: 0, disconnected: 0, queries: 0 };
-  const client: DatabaseClient = {
-    $connect: async () => {
-      calls.connected++;
-      if (fail) throw new Error("sensitive-driver-detail");
+  const client: DatabaseClient = Object.assign(
+    createDatabaseClient(
+      "sqlserver://not-used.invalid:1433;database=OminiDB;user=fixture;password={fixture};encrypt=true",
+    ),
+    {
+      $connect: async () => {
+        calls.connected++;
+        if (fail) throw new Error("sensitive-driver-detail");
+      },
+      $disconnect: async () => {
+        calls.disconnected++;
+      },
+      $queryRaw: (async (sql: TemplateStringsArray) => {
+        calls.queries++;
+        assert.equal(sql.join(""), "SELECT 1 AS connected");
+        if (fail) throw new Error("sensitive-driver-detail");
+        return [];
+      }) as DatabaseClient["$queryRaw"],
     },
-    $disconnect: async () => {
-      calls.disconnected++;
-    },
-    $queryRaw: (async (sql: TemplateStringsArray) => {
-      calls.queries++;
-      assert.equal(sql.join(""), "SELECT 1 AS connected");
-      if (fail) throw new Error("sensitive-driver-detail");
-      return [];
-    }) as DatabaseClient["$queryRaw"],
-  };
+  );
   return { client, calls };
 }
 test("SQL Server URL handles braced delimiters without logging values", () => {
@@ -162,12 +167,12 @@ test("connection and disconnect failures do not leak driver messages in warnings
   try {
     const service = new PrismaService(
       new ConfigService({ PERSISTENCE_ENABLED: true, DATABASE_URL: "private" }),
-      () => ({
-        ...fakeClient(true).client,
-        $disconnect: async () => {
-          throw new Error("private");
-        },
-      }),
+      () =>
+        Object.assign(fakeClient(true).client, {
+          $disconnect: async () => {
+            throw new Error("private");
+          },
+        }),
     );
     await service.onModuleInit();
     await service.onModuleDestroy();
@@ -179,8 +184,8 @@ test("connection and disconnect failures do not leak driver messages in warnings
   }
 });
 
-test("generated SQL Server client exposes the six models without connecting", async () => {
-  assert.equal(Object.keys(Prisma.ModelName).length, 6);
+test("generated SQL Server client preserves business models and adds auth without connecting", async () => {
+  assert.equal(Object.keys(Prisma.ModelName).length, 9);
   const client = createDatabaseClient(
     "sqlserver://not-used.invalid:1433;database=OminiDB;user=fixture;password={fixture};encrypt=true",
   );

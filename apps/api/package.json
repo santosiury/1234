@@ -16,20 +16,24 @@
     "db:migrate:deploy": "tsx scripts/migrate.ts deploy",
     "db:seed": "tsx prisma/seed.ts",
     "check:migrations": "tsx scripts/check-migrations.ts",
-    "postinstall": "npm run prisma:generate"
+    "postinstall": "npm run prisma:generate",
+    "auth:key": "tsx scripts/auth-key.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.2.8",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.2.8",
+    "@nestjs/jwt": "^11.0.2",
     "@nestjs/platform-express": "^11.2.8",
     "@nestjs/swagger": "^11.0.0",
     "@omini/shared": "0.1.0",
     "@prisma/adapter-mssql": "6.19.3",
     "@prisma/client": "6.19.3",
+    "argon2": "^0.44.0",
     "dotenv": "^17.4.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@nestjs/testing": "^11.2.8",

@@ -4,38 +4,7 @@ import {
   fireEvent,
   testRouter,
 } from "expo-router/testing-library";
-import R0 from "../app/_layout";
-import R1 from "../app/index";
-import R2 from "../app/client/_layout";
-import R3 from "../app/client/index";
-import R4 from "../app/client/categories";
-import R5 from "../app/client/search";
-import R6 from "../app/client/requests";
-import R7 from "../app/client/profile";
-import R8 from "../app/provider/_layout";
-import R9 from "../app/provider/index";
-import R10 from "../app/provider/requests";
-import R11 from "../app/provider/services";
-import R12 from "../app/provider/profile";
-import R13 from "../app/professional/[id]";
-import R14 from "../app/+not-found";
-const routes = {
-  _layout: R0,
-  index: R1,
-  "client/_layout": R2,
-  "client/index": R3,
-  "client/categories": R4,
-  "client/search": R5,
-  "client/requests": R6,
-  "client/profile": R7,
-  "provider/_layout": R8,
-  "provider/index": R9,
-  "provider/requests": R10,
-  "provider/services": R11,
-  "provider/profile": R12,
-  "professional/[id]": R13,
-  "+not-found": R14,
-};
+import { routes } from "./support/routes";
 test("client navigation, search, details, back and mode switching", async () => {
   await renderRouter(routes);
   await fireEvent.press(screen.getByText("Explorar como cliente"));

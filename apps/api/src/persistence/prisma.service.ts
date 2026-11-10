@@ -4,6 +4,7 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import {
@@ -33,6 +34,13 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
         "Database unavailable; process liveness and demo mode remain independent.",
       );
     }
+  }
+  orm(): DatabaseClient {
+    if (!this.config.get<boolean>("PERSISTENCE_ENABLED"))
+      throw new ServiceUnavailableException("Persistence unavailable");
+    return (this.client ??= this.factory(
+      this.config.getOrThrow<string>("DATABASE_URL"),
+    ));
   }
   async diagnose(): Promise<DatabaseStatus> {
     if (!this.config.get<boolean>("PERSISTENCE_ENABLED")) return "disabled";

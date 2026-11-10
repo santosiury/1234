@@ -1,3 +1,4 @@
+import { useSession } from "../src/auth/session";
 import { Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
@@ -11,6 +12,7 @@ import { useMode } from "../src/mode";
 import { theme } from "../src/theme";
 export default function Welcome() {
   const { setMode } = useMode();
+  const { state, manager } = useSession();
   return (
     <ScreenContainer>
       <Text style={[ui.title, { fontSize: 46, marginTop: 24 }]}>
@@ -37,25 +39,59 @@ export default function Welcome() {
         Encontre profissionais para cuidar da sua casa e do seu dia a dia em
         Araranguá.
       </Text>
+      {!!state.message && (
+        <Text accessibilityRole="alert" style={ui.text}>
+          {state.message}
+        </Text>
+      )}
+      {state.status === "offline" && (
+        <PrimaryButton
+          secondary
+          title="Tentar restaurar sessão"
+          onPress={() => void manager.restore()}
+        />
+      )}
+      {state.user ? (
+        <PrimaryButton
+          title="Minha conta"
+          onPress={() => router.push("/account")}
+        />
+      ) : (
+        <>
+          <PrimaryButton
+            title="Entrar na minha conta"
+            onPress={() => router.push("/login")}
+          />
+          <PrimaryButton
+            secondary
+            title="Cadastrar no Omini"
+            onPress={() => router.push("/register")}
+          />
+        </>
+      )}
       <DemoNotice />
-      <PrimaryButton
-        title="Explorar como cliente"
-        onPress={() => {
-          setMode("client");
-          router.replace("/client");
-        }}
-      />
-      <PrimaryButton
-        secondary
-        title="Conhecer o modo prestador"
-        onPress={() => {
-          setMode("provider");
-          router.replace("/provider");
-        }}
-      />
+      {(!state.user || state.user.profiles.client) && (
+        <PrimaryButton
+          title="Explorar como cliente"
+          onPress={() => {
+            setMode("client");
+            router.replace("/client");
+          }}
+        />
+      )}
+      {(!state.user || state.user.profiles.provider) && (
+        <PrimaryButton
+          secondary
+          title="Conhecer o modo prestador"
+          onPress={() => {
+            setMode("provider");
+            router.replace("/provider");
+          }}
+        />
+      )}
       <Text style={ui.text}>
-        Uma conta, duas experiências. A autenticação será implementada em outra
-        fase.
+        Uma conta, duas experiências. Os catálogos continuam demonstrativos
+        nesta etapa.
       </Text>
     </ScreenContainer>
   );

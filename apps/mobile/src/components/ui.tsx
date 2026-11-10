@@ -53,6 +53,7 @@ export function ScreenContainer({ children }: PropsWithChildren) {
       style={{ flex: 1, backgroundColor: theme.colors.background }}
     >
       <ScrollView
+        automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: 20, gap: 24, paddingBottom: 40 }}
       >
@@ -227,8 +228,8 @@ export function DemoNotice() {
       }}
     >
       <Text style={{ color: theme.colors.ink, fontSize: 13, lineHeight: 19 }}>
-        Experiência demonstrativa · sem login, contratações ou profissionais
-        reais.
+        Catálogo demonstrativo · profissionais fictícios e contratação ainda
+        indisponível.
       </Text>
     </View>
   );

@@ -17,6 +17,8 @@ model User {
   isActive        Boolean          @default(true)
   createdAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
   updatedAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  authCredential  AuthCredential?
+  authSessions    AuthSession[]
   clientProfile   ClientProfile?
   providerProfile ProviderProfile?
 
@@ -91,4 +93,40 @@ model ProviderServiceArea {
 
   @@unique([providerId, state, city, neighborhood])
   @@index([state, city, isActive, providerId])
+}
+
+model AuthCredential {
+  userId          String   @id @db.UniqueIdentifier
+  emailNormalized String   @unique @db.NVarChar(254)
+  passwordHash    String   @db.NVarChar(255)
+  createdAt       DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt       DateTime @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  user            User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model AuthSession {
+  id        String         @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  userId    String         @db.UniqueIdentifier
+  createdAt DateTime       @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime       @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  expiresAt DateTime       @db.DateTime2
+  revokedAt DateTime?      @db.DateTime2
+  user      User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tokens    RefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id         String      @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  sessionId  String      @db.UniqueIdentifier
+  tokenHash  String      @unique @db.Char(64)
+  createdAt  DateTime    @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  expiresAt  DateTime    @db.DateTime2
+  consumedAt DateTime?   @db.DateTime2
+  session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([sessionId])
+  @@index([expiresAt])
 }

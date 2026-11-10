@@ -17,3 +17,23 @@ export interface DemoProfessional {
   description: string;
   initials: string;
 }
+
+export interface AuthUser {
+  id: string;
+  displayName: string;
+  email: string;
+  profiles: { client: boolean; provider: boolean };
+}
+export interface AuthTokens {
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
+  accessExpiresAt: string;
+  refreshExpiresAt: string;
+}
+export interface RegisterInput {
+  displayName: string;
+  email: string;
+  password: string;
+  profiles: ExperienceMode[];
+}

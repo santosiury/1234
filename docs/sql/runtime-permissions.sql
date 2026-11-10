@@ -11,3 +11,8 @@ GRANT SELECT, INSERT, UPDATE ON OBJECT::[dbo].[ProviderService] TO [omini_runtim
 GRANT SELECT, INSERT, UPDATE ON OBJECT::[dbo].[ProviderServiceArea] TO [omini_runtime_role];
 -- No DELETE, DDL or _prisma_migrations access. Activation uses isActive.
 -- GRANTs do not remove pre-existing privileges; inspect the login/user memberships.
+
+-- Authentication tables: rotation/revocation uses UPDATE, not DELETE.
+GRANT SELECT, INSERT, UPDATE ON OBJECT::[dbo].[AuthCredential] TO [omini_runtime_role];
+GRANT SELECT, INSERT, UPDATE ON OBJECT::[dbo].[AuthSession] TO [omini_runtime_role];
+GRANT SELECT, INSERT, UPDATE ON OBJECT::[dbo].[RefreshToken] TO [omini_runtime_role];

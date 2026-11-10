@@ -4,9 +4,11 @@ import { spawnSync } from "node:child_process";
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   NODE_ENV: "test",
+  AUTH_ENABLED: "false",
   PERSISTENCE_ENABLED: "false",
   DB_DIAGNOSTICS_ENABLED: "false",
 };
+delete env.JWT_ACCESS_SECRET;
 delete env.DATABASE_URL;
 delete env.MIGRATION_DATABASE_URL;
 const tests = readdirSync("test")
@@ -16,7 +18,7 @@ const tests = readdirSync("test")
 if (!tests.length) throw new Error("No API tests found");
 const result = spawnSync(
   process.execPath,
-  ["--import", "tsx", "--test", ...tests],
+  ["--import", "tsx", "--test", "--test-concurrency=1", ...tests],
   { env, stdio: "inherit" },
 );
 process.exitCode = result.status ?? 1;
