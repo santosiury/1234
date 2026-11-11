@@ -1,6 +1,8 @@
-# Omini · Identidade visual (Fase 2.2.V)
+# Omini · Prestadores e catálogo (Fase 2.3)
 
-Marketplace mobile de serviços para Araranguá, SC. **Um aplicativo Android/iOS, duas experiências demonstrativas.** Há cadastro, login e sessão segura; contratação e avaliações continuam indisponíveis, e o catálogo de profissionais permanece demonstrativo. Não é PWA. O backend não depende do SQL Server para iniciar no modo demonstrativo. A fundação de persistência da Fase 2.1 está preparada; consulte [o guia de banco](docs/fase-2-1-persistencia.md) antes de qualquer deploy de migrations.
+Marketplace mobile de serviços para Araranguá, SC. Um aplicativo Android/iOS, duas experiências, cadastro/login e sessão segura. Esta fase integra perfil profissional, serviços, áreas de atendimento e catálogo público ao SQL Server existente. Contratação, pagamentos e avaliações continuam indisponíveis. A demonstração está separada do catálogo real.
+
+Atualização e testes locais: [Fase 2.3 — prestadores, catálogo, Windows e iPhone](docs/fase-2-3-prestadores.md). **Nenhuma nova migration, seed ou alteração de credenciais é necessária nesta fase.**
 
 Redesign visual em `feature/fase-2-2-visual`, baseado em `21ad687`: marca vetorial, preto/branco/verde-lima, Inter local e splash Expo SDK 58. Consulte [o guia visual e o roteiro de validação no iPhone](docs/fase-2-2-visual.md). Autenticação, SecureStore e banco permanecem preservados; esta etapa não requer migrations.
 
@@ -13,10 +15,12 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
     app/provider/              # abas de prestador
     app/professional/[id].tsx   # detalhes com retorno
     src/components/            # componentes e identidade visual
-    src/demo/                  # catálogo fictício
+    src/demo/                  # catálogo fictício, somente no modo demonstrativo
+    src/marketplace/           # catálogo real, API e formulários do prestador
     test/                      # testes de navegação e busca
   apps/api/                    # NestJS 11, REST e Swagger
     src/health/                # módulo de liveness
+    src/marketplace/            # perfil, serviços, áreas e busca pública SQL Server
     prisma/                    # schema sqlserver, migration inicial e seed
     test/                      # HTTP, Swagger, erros, CORS e configuração
   packages/shared/             # contratos TypeScript, sem dependências de runtime
@@ -26,7 +30,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.2 — migration incremental, permissões, chave local e teste no iPhone](docs/fase-2-2-autenticacao.md). As instruções abaixo permitem instalar e explorar o modo demonstrativo; autenticação exige as flags e permissões do novo guia.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.3 — atualização sem migration e teste de prestadores no iPhone](docs/fase-2-3-prestadores.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 
@@ -35,7 +39,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch feature/fase-2-2-visual
+git switch feature/fase-2-3-prestadores
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env
