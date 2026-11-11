@@ -18,5 +18,6 @@ import { AuthRateGuard } from "./auth-rate.guard";
     { provide: AuthRepository, useClass: PrismaAuthRepository },
   ],
   controllers: [AuthController],
+  exports: [AuthService, AccessGuard],
 })
 export class AuthModule {}

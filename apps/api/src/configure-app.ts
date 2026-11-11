@@ -15,7 +15,7 @@ export function configureApp(app: INestApplication) {
       "Omini foundation · process liveness. Development-only database diagnostics are excluded from the public specification. Authentication enabled explicitly; no hiring endpoints.",
     )
     .addBearerAuth()
-    .setVersion("0.2.2")
+    .setVersion("0.2.3")
     .build();
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, spec));
 }

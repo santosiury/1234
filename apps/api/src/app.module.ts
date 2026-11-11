@@ -1,3 +1,4 @@
+import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { AuthModule } from "./auth/auth.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
@@ -14,6 +15,7 @@ import { validateEnvironment } from "./config";
     HealthModule,
     PersistenceModule,
     AuthModule,
+    MarketplaceModule,
   ],
 })
 export class AppModule {}
