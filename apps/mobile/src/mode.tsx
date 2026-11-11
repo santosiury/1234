@@ -10,6 +10,8 @@ import { useSession } from "./auth/session";
 const Context = createContext<{
   mode: ExperienceMode | null;
   setMode: (mode: ExperienceMode) => void;
+  catalogSource: "real" | "demo";
+  setCatalogSource: (source: "real" | "demo") => void;
 } | null>(null);
 export function ModeProvider({ children }: PropsWithChildren) {
   const { state } = useSession();
@@ -34,7 +36,14 @@ export function ModeProvider({ children }: PropsWithChildren) {
       ? selection.mode
       : null;
   const userId = user?.id ?? null;
+  const [demoOwner, setDemoOwner] = useState<string | null | undefined>(
+    undefined,
+  );
+  const catalogSource = demoOwner === userId ? "demo" : "real";
+  const setCatalogSource = (source: "real" | "demo") =>
+    setDemoOwner(source === "demo" ? userId : undefined);
   useEffect(() => {
+    setDemoOwner(undefined);
     setSelection((previous) =>
       previous.userId === userId ? previous : { userId, mode: preferred },
     );
@@ -45,7 +54,11 @@ export function ModeProvider({ children }: PropsWithChildren) {
       setSelection({ userId: user?.id ?? null, mode: next });
   };
   return (
-    <Context.Provider value={{ mode, setMode }}>{children}</Context.Provider>
+    <Context.Provider
+      value={{ mode, setMode, catalogSource, setCatalogSource }}
+    >
+      {children}
+    </Context.Provider>
   );
 }
 export function useMode() {

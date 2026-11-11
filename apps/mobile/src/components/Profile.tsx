@@ -1,6 +1,6 @@
 import { useSession } from "../auth/session";
 import { AuthFailure } from "../auth/api";
-import { useState } from "react";
+import { useState, type PropsWithChildren } from "react";
 import { Text, View } from "react-native";
 import { router } from "expo-router";
 import type { HealthResponse } from "@omini/shared";
@@ -15,8 +15,8 @@ import {
   Feedback,
   ui,
 } from "./ui";
-export function Profile() {
-  const { mode, setMode } = useMode();
+export function Profile({ children }: PropsWithChildren) {
+  const { mode, setMode, catalogSource } = useMode();
   const { state, manager } = useSession();
   const [accountBusy, setAccountBusy] = useState(false);
   const [accountMessage, setAccountMessage] = useState("");
@@ -74,6 +74,7 @@ export function Profile() {
           mode === "client" ? "Seu espaço no Omini" : "Seu perfil profissional"
         }
       />
+      {children}
       {state.user ? (
         <View style={ui.group}>
           <View style={ui.darkCard}>
@@ -162,8 +163,8 @@ export function Profile() {
               {mode === "client" ? "cliente" : "prestador"}
             </Text>
             <Text style={[ui.text, ui.onDarkMuted]}>
-              Esta navegação é demonstrativa. Entre ou cadastre uma conta para
-              acessar seu perfil real.
+              Entre ou cadastre uma conta para acessar seu perfil e configurar
+              seus serviços.
             </Text>
           </View>
           <PrimaryButton
@@ -192,7 +193,7 @@ export function Profile() {
         title="Voltar às boas-vindas"
         onPress={() => router.replace("/")}
       />
-      <DemoNotice />
+      {catalogSource === "demo" && <DemoNotice />}
       <View style={ui.card}>
         <Text style={ui.section}>Conexão com a API</Text>
         <Text style={ui.text}>

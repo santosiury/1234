@@ -1,35 +1,7 @@
-import { View } from "react-native";
-import { router } from "expo-router";
-import {
-  ScreenContainer,
-  Header,
-  ServiceCategoryCard,
-  DemoNotice,
-  ui,
-} from "../../src/components/ui";
-import { categories } from "../../src/demo/catalog";
-export default function Categories() {
-  return (
-    <ScreenContainer>
-      <Header
-        title="Todo tipo de ajuda"
-        subtitle="Escolha uma especialidade para explorar os perfis fictícios."
-      />
-      <View style={ui.grid}>
-        {categories.map((category) => (
-          <ServiceCategoryCard
-            key={category.id}
-            category={category}
-            onPress={() =>
-              router.push({
-                pathname: "/client/search",
-                params: { category: category.id },
-              })
-            }
-          />
-        ))}
-      </View>
-      <DemoNotice />
-    </ScreenContainer>
-  );
+import Demo from "../../src/demo/screens/Categories";
+import { CatalogCategories } from "../../src/marketplace/CatalogScreens";
+import { useMode } from "../../src/mode";
+export default function Screen() {
+  const { catalogSource } = useMode();
+  return catalogSource === "demo" ? <Demo /> : <CatalogCategories />;
 }

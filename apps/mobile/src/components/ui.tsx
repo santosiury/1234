@@ -401,7 +401,11 @@ export function OminiInput({
           {...props}
           placeholderTextColor={theme.colors.muted}
           selectionColor={theme.colors.focus}
-          style={[ui.input, props.style]}
+          style={[
+            ui.input,
+            props.multiline && { minHeight: 112, textAlignVertical: "top" },
+            props.style,
+          ]}
           onFocus={(e) => {
             setFocused(true);
             props.onFocus?.(e);

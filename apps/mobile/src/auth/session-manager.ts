@@ -165,7 +165,9 @@ export class SessionManager {
       this.update("guest", null, message);
     });
   }
-  private async authorized(operation: (access: string) => Promise<AuthUser>) {
+  private async authorized<T>(
+    operation: (access: string) => Promise<T>,
+  ): Promise<T> {
     if (!this.tokens)
       throw new AuthFailure(401, "SESSION_EXPIRED", "Entre novamente.");
     try {
@@ -181,6 +183,10 @@ export class SessionManager {
         throw retryError;
       }
     }
+  }
+  /** Private feature calls share the existing single-writer refresh/logout queue. */
+  request<T>(operation: (access: string) => Promise<T>): Promise<T> {
+    return this.exclusive(() => this.authorized(operation));
   }
   sync() {
     return this.exclusive(async () => {

@@ -14,7 +14,7 @@ import { BrandLogo } from "../src/components/Brand";
 import { useMode } from "../src/mode";
 import { theme } from "../src/theme";
 export default function Welcome() {
-  const { setMode } = useMode();
+  const { setMode, setCatalogSource } = useMode();
   const { state, manager } = useSession();
   const [exploring, setExploring] = useState(false);
   return (
@@ -51,7 +51,7 @@ export default function Welcome() {
       </View>
       <View style={ui.group}>
         <TextButton
-          title="Explorar demonstração"
+          title="Explorar Omini"
           light
           expanded={exploring}
           icon={exploring ? "chevron-up" : "chevron-down"}
@@ -59,12 +59,24 @@ export default function Welcome() {
         />
         {exploring && (
           <>
+            {(!state.user || state.user.profiles.client) && (
+              <TextButton
+                light
+                title="Buscar profissionais reais"
+                onPress={() => {
+                  setCatalogSource("real");
+                  setMode("client");
+                  router.replace("/client");
+                }}
+              />
+            )}
             <DemoNotice dark />
             {(!state.user || state.user.profiles.client) && (
               <TextButton
                 light
                 title="Explorar como cliente"
                 onPress={() => {
+                  setCatalogSource("demo");
                   setMode("client");
                   router.replace("/client");
                 }}
@@ -75,6 +87,7 @@ export default function Welcome() {
                 light
                 title="Conhecer o modo prestador"
                 onPress={() => {
+                  setCatalogSource("demo");
                   setMode("provider");
                   router.replace("/provider");
                 }}

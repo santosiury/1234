@@ -1,16 +1,18 @@
+import Demo from "../../src/demo/screens/Services";
 import {
-  ScreenContainer,
-  Header,
-  FutureFeature,
-} from "../../src/components/ui";
-export default function Services() {
-  return (
-    <ScreenContainer>
-      <Header
-        title="Seu trabalho, seu espaço"
-        subtitle="Gerencie suas especialidades em uma próxima fase."
-      />
-      <FutureFeature title="Cadastro de serviços em breve" />
-    </ScreenContainer>
+  ProviderServices,
+  ProviderGuest,
+} from "../../src/marketplace/ProviderScreens";
+import { useMode } from "../../src/mode";
+import { useSession } from "../../src/auth/session";
+export default function Screen() {
+  const { catalogSource } = useMode();
+  const { state } = useSession();
+  return catalogSource === "demo" ? (
+    <Demo />
+  ) : state.user ? (
+    <ProviderServices key={state.user.id} />
+  ) : (
+    <ProviderGuest />
   );
 }

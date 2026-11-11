@@ -119,3 +119,33 @@ test("secure storage failure never silently falls back or claims successful logi
   });
   expect(g.manager.state.status).toBe("authenticated");
 });
+
+test("private feature DTO requests reuse rotation once and never replace the authenticated user", async () => {
+  const { api, manager, storage } = fixture();
+  await manager.login("pessoa@example.test", "test-password");
+  const userId = manager.state.user!.id;
+  api.counter = 5;
+  const operation = async (access: string) => {
+    await api.me(access);
+    return { services: ["fixture service"], areas: ["SC"] };
+  };
+  const results = await Promise.all([
+    manager.request(operation),
+    manager.request(operation),
+  ]);
+  expect(results[0].services).toEqual(["fixture service"]);
+  expect(api.refreshCalls).toBe(1);
+  expect(manager.state.user!.id).toBe(userId);
+  expect(storage.record?.token).toBe(refreshValue(6));
+});
+test("a private feature request expires the same session when refresh is revoked", async () => {
+  const { api, manager, storage } = fixture();
+  await manager.login("pessoa@example.test", "test-password");
+  api.forceUnauthorized = true;
+  api.failRefresh = new AuthFailure(401, "SESSION_EXPIRED", "Expired");
+  await expect(
+    manager.request((access) => api.me(access)),
+  ).rejects.toBeInstanceOf(AuthFailure);
+  expect(manager.state.status).toBe("expired");
+  expect(storage.record).toBeNull();
+});
