@@ -1,11 +1,11 @@
+import { useState } from "react";
 import { useSession } from "../src/auth/session";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { StatusBar } from "expo-status-bar";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { StyleSheet, Text, View } from "react-native";
 import { router } from "expo-router";
 import {
   ScreenContainer,
   PrimaryButton,
+  TextButton,
   DemoNotice,
   Feedback,
   ui,
@@ -16,84 +16,29 @@ import { theme } from "../src/theme";
 export default function Welcome() {
   const { setMode } = useMode();
   const { state, manager } = useSession();
+  const [exploring, setExploring] = useState(false);
   return (
-    <ScreenContainer dark>
-      <StatusBar style="light" />
-      <View
-        style={[
-          ui.row,
-          {
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            paddingVertical: theme.space.sm,
-          },
-        ]}
-      >
-        <BrandLogo light width={156} />
-        <Text style={[ui.label, ui.onDarkMuted]}>ARARANGUÁ, SC</Text>
-      </View>
-      <View style={{ gap: theme.space.md, paddingTop: theme.space.md }}>
-        <Text style={[ui.label, { color: theme.colors.accent }]}>
-          SEU DIA A DIA, MAIS SIMPLES.
-        </Text>
+    <ScreenContainer dark compact>
+      <BrandLogo light width={148} />
+      <View style={styles.intro}>
         <Text accessibilityRole="header" style={styles.headline}>
           Tudo resolvido.{"\n"}
-          <Text style={{ color: theme.colors.onDarkMuted }}>
-            Sem dor de cabeça.
-          </Text>
+          <Text style={ui.onDarkMuted}>Sem dor de cabeça.</Text>
         </Text>
         <Text style={[ui.text, ui.onDarkMuted]}>
-          Encontre profissionais para cuidar da sua casa e do seu dia a dia em
-          Araranguá.
+          Profissionais para o seu dia a dia em Araranguá.
         </Text>
       </View>
-      <View
-        style={styles.services}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      >
-        {(["flash-outline", "water-outline", "construct-outline"] as const).map(
-          (icon, index) => (
-            <View
-              key={icon}
-              style={[
-                styles.service,
-                index === 1 && { backgroundColor: theme.colors.accent },
-              ]}
-            >
-              <Ionicons
-                name={icon}
-                size={30}
-                color={index === 1 ? theme.colors.ink : theme.colors.onDark}
-              />
-            </View>
-          ),
-        )}
-        <View style={{ flex: 1, minWidth: 80, gap: theme.space.xxs }}>
-          <Text style={[ui.small, ui.onDark]}>Gente daqui.</Text>
-          <Text style={[ui.small, ui.onDarkMuted]}>Soluções por perto.</Text>
-        </View>
-      </View>
-      {!!state.message && <Feedback message={state.message} />}
-      {state.status === "offline" && (
-        <PrimaryButton
-          secondary
-          title="Tentar restaurar sessão"
-          onPress={() => void manager.restore()}
-        />
-      )}
       <View style={ui.group}>
         {state.user ? (
           <PrimaryButton
             title="Minha conta"
-            icon="arrow-forward"
             onPress={() => router.push("/account")}
           />
         ) : (
           <>
             <PrimaryButton
               title="Entrar na minha conta"
-              icon="arrow-forward"
               onPress={() => router.push("/login")}
             />
             <PrimaryButton
@@ -104,89 +49,60 @@ export default function Welcome() {
           </>
         )}
       </View>
-      <View style={{ gap: theme.space.xs }}>
-        <Text style={[ui.label, ui.onDarkMuted]}>CONHEÇA O OMINI</Text>
-        {(!state.user || state.user.profiles.client) && (
-          <ExploreLink
-            title="Explorar como cliente"
-            onPress={() => {
-              setMode("client");
-              router.replace("/client");
-            }}
-          />
+      <View style={ui.group}>
+        <TextButton
+          title="Explorar demonstração"
+          light
+          expanded={exploring}
+          icon={exploring ? "chevron-up" : "chevron-down"}
+          onPress={() => setExploring((value) => !value)}
+        />
+        {exploring && (
+          <>
+            <DemoNotice dark />
+            {(!state.user || state.user.profiles.client) && (
+              <TextButton
+                light
+                title="Explorar como cliente"
+                onPress={() => {
+                  setMode("client");
+                  router.replace("/client");
+                }}
+              />
+            )}
+            {(!state.user || state.user.profiles.provider) && (
+              <TextButton
+                light
+                title="Conhecer o modo prestador"
+                onPress={() => {
+                  setMode("provider");
+                  router.replace("/provider");
+                }}
+              />
+            )}
+          </>
         )}
-        {(!state.user || state.user.profiles.provider) && (
-          <ExploreLink
-            title="Conhecer o modo prestador"
-            onPress={() => {
-              setMode("provider");
-              router.replace("/provider");
-            }}
-          />
-        )}
-        <DemoNotice dark />
       </View>
-      <Text style={[ui.small, ui.onDarkMuted]}>
-        Uma conta, duas experiências. Os catálogos continuam demonstrativos
-        nesta etapa.
-      </Text>
+      {!!state.message && <Feedback message={state.message} />}
+      {state.status === "offline" && (
+        <PrimaryButton
+          secondary
+          title="Tentar restaurar sessão"
+          onPress={() => void manager.restore()}
+        />
+      )}
     </ScreenContainer>
   );
 }
-function ExploreLink({
-  title,
-  onPress,
-}: {
-  title: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={title}
-      onPress={onPress}
-      style={({ pressed }) => [
-        ui.row,
-        {
-          minHeight: 48,
-          justifyContent: "space-between",
-          opacity: pressed ? 0.6 : 1,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          ui.text,
-          ui.onDark,
-          { fontFamily: theme.fonts.medium, flexShrink: 1 },
-        ]}
-      >
-        {title}
-      </Text>
-      <Ionicons name="arrow-forward" size={18} color={theme.colors.accent} />
-    </Pressable>
-  );
-}
 const styles = StyleSheet.create({
+  intro: { gap: theme.space.sm },
   headline: {
-    fontSize: theme.type.display,
-    lineHeight: 46,
-    letterSpacing: -1.8,
+    alignSelf: "stretch",
+    paddingRight: 2,
+    fontSize: theme.type.title,
+    lineHeight: 40,
+    letterSpacing: -0.8,
     fontFamily: theme.fonts.bold,
     color: theme.colors.onDark,
-  },
-  services: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    gap: theme.space.sm,
-  },
-  service: {
-    width: 60,
-    height: 68,
-    borderRadius: theme.radii.medium,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: theme.colors.darkSurface,
   },
 });

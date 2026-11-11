@@ -42,7 +42,7 @@ Botões mantêm nome acessível durante carregamento e ficam bloqueados para nov
 
 | Área                                     | Alteração                                                                                                   |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Boas-vindas                              | Fundo preto, marca vetorial, slogan, composição abstrata com ícones, cadastro/login e exploração sem login  |
+| Boas-vindas                              | Fundo preto, marca vetorial, slogan, cadastro/login e acesso único à exploração demonstrativa               |
 | Login / cadastro                         | Header da marca, campos com labels/ícones, foco, estados de envio, feedback e seleção dos perfis preservada |
 | Home cliente                             | Busca destacada, banner escuro, categorias e perfis de exemplo por seção                                    |
 | Categorias                               | Grid reutilizável com as mesmas oito especialidades demonstrativas                                          |
@@ -86,7 +86,7 @@ npm run check:brand
 
 Fontes e splash são as duas dependências mobile adicionadas. SecureStore e os pins/overrides de React e Expo permanecem. Sharp é dependência de desenvolvimento na raiz, não código embarcado.
 
-## Verificações nesta entrega
+## Verificações do redesign inicial
 
 Os resultados finais estão registrados abaixo após execução na nuvem. Nenhum teste aqui acessa o SQL Server do Windows ou um iPhone físico.
 
@@ -204,3 +204,13 @@ Instale pelo link do build. Encerre o processo do app e abra pelo ícone, repeti
 ## Limitações e integração
 
 Sem execução física em iOS/Android, build IPA/APK, teste de teclado/safe area nativos, conexão SQL Server ou validação real do launch screen nesta nuvem. Os testes HTTP usam a infraestrutura de teste existente, não o OminiDB. Valide a branch no iPhone antes de decidir a integração com a Fase 2.3. Nenhum merge automático foi feito.
+
+## Refinamento da home
+
+A entrada foi simplificada para logo, headline, subtítulo curto, dois CTAs de conta e um acesso “Explorar demonstração”. Esse acesso expande/recolhe as opções cliente/prestador; os destinos e as permissões existentes foram preservados. Ícones decorativos, chamada extra e texto repetido foram retirados do topo. Mensagens de recuperação e o botão de restaurar sessão continuam disponíveis quando necessários, abaixo das ações principais.
+
+`PrimaryButton` e `TextButton` compartilham um conteúdo com largura delimitada, `minWidth: 0`, label flexível, padding para os glifos e line-height explícito. Não há limite de linhas nem altura fixa: textos maiores quebram e aumentam o botão, preservando o tamanho acessível da fonte. `ScreenContainer` ganhou uma opção de espaçamento compacto reutilizável.
+
+Validação deste refinamento: `npm run typecheck`, `npm run lint` e `npm test` aprovados (48 testes: 27 API/scripts e 21 mobile). A regressão de navegação cobre abrir/recolher a exploração e acessar ambos os modos. Na revisão auxiliar pelo Chromium, os CTAs e as letras renderizadas ficaram dentro dos limites em 320, 375, 390 e 430 px; as ações essenciais ficaram acima da dobra na escala normal, usando uma área de revisão reduzida para reservar espaço às barras do aparelho. A ampliação dos textos dos CTAs a 200% resultou em quebra e crescimento dos botões, sem cortes. Essa simulação não substitui Dynamic Type/CoreText no iOS. O aviso de recuperação exibido na prévia web decorre da indisponibilidade do SecureStore nesse adaptador temporário; a autenticação não foi alterada.
+
+No iPhone, confira a entrada com tamanho de texto normal e ampliado, expanda a demonstração e confirme os nomes completos dos três CTAs citados no relato. Nenhum teste físico foi executado neste refinamento. Dependências, configuração do Expo, autenticação, SecureStore, rotas, backend, migrations e banco permanecem sem alterações.

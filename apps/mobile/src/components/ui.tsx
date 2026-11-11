@@ -88,8 +88,10 @@ export const ui = StyleSheet.create({
 export function ScreenContainer({
   children,
   dark = false,
-}: PropsWithChildren<{ dark?: boolean }>) {
+  compact = false,
+}: PropsWithChildren<{ dark?: boolean; compact?: boolean }>) {
   const insets = useSafeAreaInsets();
+  const contentGap = compact ? theme.space.md : theme.space.lg;
   return (
     <SafeAreaView
       edges={["top", "left", "right"]}
@@ -105,8 +107,7 @@ export function ScreenContainer({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           padding: theme.space.md,
-          gap: theme.space.lg,
-          paddingBottom: theme.space.lg + insets.bottom,
+          paddingBottom: contentGap + insets.bottom,
           flexGrow: 1,
         }}
       >
@@ -115,7 +116,7 @@ export function ScreenContainer({
             width: "100%",
             maxWidth: 620,
             alignSelf: "center",
-            gap: theme.space.lg,
+            gap: contentGap,
             flexGrow: 1,
           }}
         >
@@ -222,8 +223,10 @@ export function PrimaryButton({
       disabled={disabled || loading}
       style={({ pressed }) => ({
         borderRadius: theme.radii.medium,
-        paddingVertical: theme.space.md - 3,
-        paddingHorizontal: theme.space.md,
+        paddingVertical: theme.space.sm + 2,
+        paddingHorizontal: theme.space.sm + 4,
+        alignSelf: "stretch",
+        minWidth: 0,
         alignItems: "center",
         justifyContent: "center",
         minHeight: 56,
@@ -233,32 +236,116 @@ export function PrimaryButton({
         opacity: pressed ? 0.76 : 1,
       })}
     >
-      <View style={[ui.row, { justifyContent: "center" }]}>
-        {loading && (
-          <ActivityIndicator
-            accessibilityLabel="Carregando"
-            color={foreground}
-            size="small"
-          />
-        )}
-        {!loading && icon && (
-          <Ionicons name={icon} size={20} color={foreground} />
-        )}
-        <Text
-          style={{
-            color: disabled ? theme.colors.muted : foreground,
-            fontSize: theme.type.body,
-            fontFamily: theme.fonts.semibold,
-            textAlign: "center",
-            flexShrink: 1,
-          }}
-        >
-          {title}
-        </Text>
-      </View>
+      <ButtonContent
+        title={title}
+        loading={loading}
+        icon={icon}
+        color={disabled ? theme.colors.muted : foreground}
+      />
     </Pressable>
   );
 }
+
+/** Bounded label shared by filled CTAs and quieter text actions. No line cap. */
+function ButtonContent({
+  title,
+  icon,
+  loading = false,
+  color,
+}: {
+  title: string;
+  icon?: IconName;
+  loading?: boolean;
+  color: string;
+}) {
+  return (
+    <View style={buttonStyles.content}>
+      {(loading || icon) && (
+        <View
+          style={buttonStyles.icon}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        >
+          {loading ? (
+            <ActivityIndicator color={color} size="small" />
+          ) : (
+            <Ionicons name={icon} size={20} color={color} />
+          )}
+        </View>
+      )}
+      <Text style={[buttonStyles.label, { color }]}>{title}</Text>
+    </View>
+  );
+}
+
+export function TextButton({
+  title,
+  onPress,
+  icon,
+  light = false,
+  expanded,
+}: {
+  title: string;
+  onPress: () => void;
+  icon?: IconName;
+  light?: boolean;
+  expanded?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={expanded === undefined ? undefined : { expanded }}
+      onPress={onPress}
+      style={({ pressed }) => [
+        buttonStyles.textAction,
+        { opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      <ButtonContent
+        title={title}
+        icon={icon}
+        color={light ? theme.colors.onDarkMuted : theme.colors.ink}
+      />
+    </Pressable>
+  );
+}
+
+const buttonStyles = StyleSheet.create({
+  content: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.space.xs,
+    width: "100%",
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  label: {
+    flex: 1,
+    minWidth: 0,
+    // A small inset also leaves room for edge glyphs/kerning in native text layout.
+    paddingHorizontal: 2,
+    fontSize: theme.type.body,
+    lineHeight: 24,
+    fontFamily: theme.fonts.semibold,
+    textAlign: "center",
+  },
+  icon: {
+    flexShrink: 0,
+    width: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  textAction: {
+    alignSelf: "stretch",
+    minWidth: 0,
+    minHeight: 48,
+    paddingHorizontal: theme.space.xs,
+    paddingVertical: theme.space.sm,
+    justifyContent: "center",
+  },
+});
 
 export function OminiInput({
   label,

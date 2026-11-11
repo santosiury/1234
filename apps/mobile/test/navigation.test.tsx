@@ -7,6 +7,7 @@ import {
 import { routes } from "./support/routes";
 test("client navigation, search, details, back and mode switching", async () => {
   await renderRouter(routes);
+  await fireEvent.press(screen.getByText("Explorar demonstração"));
   await fireEvent.press(screen.getByText("Explorar como cliente"));
   expect(await screen.findByText("De que você precisa hoje?")).toBeTruthy();
   await testRouter.push("/client/categories");
@@ -47,5 +48,41 @@ test("client navigation, search, details, back and mode switching", async () => 
 });
 test("deep link cannot silently enter a demo mode", async () => {
   await renderRouter(routes, { initialUrl: "/provider/services" });
-  expect(await screen.findByText("Explorar como cliente")).toBeTruthy();
+  expect(await screen.findByText("Explorar demonstração")).toBeTruthy();
+  expect(screen.queryByText("Explorar como cliente")).toBeNull();
+});
+
+test("welcome keeps demo modes behind one expandable action and preserves provider entry", async () => {
+  await renderRouter(routes);
+  expect(
+    screen.getByRole("button", { name: "Entrar na minha conta" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Cadastrar no Omini" }),
+  ).toBeTruthy();
+  expect(screen.queryByText("Conhecer o modo prestador")).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("button", {
+      name: "Explorar demonstração",
+      expanded: false,
+    }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Conhecer o modo prestador" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Explorar como cliente" }),
+  ).toBeTruthy();
+  await fireEvent.press(
+    screen.getByRole("button", {
+      name: "Explorar demonstração",
+      expanded: true,
+    }),
+  );
+  expect(screen.queryByText("Conhecer o modo prestador")).toBeNull();
+  await fireEvent.press(screen.getByText("Explorar demonstração"));
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Conhecer o modo prestador" }),
+  );
+  expect(await screen.findByText("Seu talento faz a diferença.")).toBeTruthy();
 });
