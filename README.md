@@ -1,10 +1,12 @@
-# Omini · Prestadores e catálogo (Fase 2.3)
+# Omini · Experiência do prestador (Fase 2.3)
 
 Marketplace mobile de serviços para Araranguá, SC. Um aplicativo Android/iOS, duas experiências, cadastro/login e sessão segura. Esta fase integra perfil profissional, serviços, áreas de atendimento e catálogo público ao SQL Server existente. Contratação, pagamentos e avaliações continuam indisponíveis. A demonstração está separada do catálogo real.
 
 Atualização e testes locais: [Fase 2.3 — prestadores, catálogo, Windows e iPhone](docs/fase-2-3-prestadores.md). **Nenhuma nova migration, seed ou alteração de credenciais é necessária nesta fase.**
 
 Redesign visual em `feature/fase-2-2-visual`, baseado em `21ad687`: marca vetorial, preto/branco/verde-lima, Inter local e splash Expo SDK 58. Consulte [o guia visual e o roteiro de validação no iPhone](docs/fase-2-2-visual.md). Autenticação, SecureStore e banco permanecem preservados; esta etapa não requer migrations.
+
+Refinamento da experiência em `feature/fase-2-3-ux-prestador`, baseado em `ddf3697`: painel com etapas reais, formulários dedicados, gerenciamento com confirmação e ajuda contextual. Veja [o novo fluxo, validação e atualização no Windows/iPhone](docs/fase-2-3-ux-prestador.md). Nenhuma migration ou alteração do banco é necessária.
 
 ## Estrutura
 
@@ -13,6 +15,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
   apps/mobile/                 # Expo SDK 58, Router, React Native, TypeScript
     app/client/                # abas de cliente
     app/provider/              # abas de prestador
+    app/provider-setup/        # formulários profissionais e áreas, fora das abas
     app/professional/[id].tsx   # detalhes com retorno
     src/components/            # componentes e identidade visual
     src/demo/                  # catálogo fictício, somente no modo demonstrativo
@@ -30,7 +33,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.3 — atualização sem migration e teste de prestadores no iPhone](docs/fase-2-3-prestadores.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [UX do prestador — atualização sem migration e roteiro no iPhone](docs/fase-2-3-ux-prestador.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 
@@ -39,7 +42,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch feature/fase-2-3-prestadores
+git switch feature/fase-2-3-ux-prestador
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env
@@ -68,7 +71,7 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:3000/api
 npm run dev:mobile
 ```
 
-Atualize o **Expo Go da App Store com suporte ao SDK 58**. Abra a Câmera do iPhone, escaneie o QR e escolha abrir no Expo Go. Permita acesso à rede local em Ajustes → Apps → Expo Go → Rede Local. O iPhone e o Windows precisam estar na mesma rede Wi-Fi. Esta branch alinha o projeto ao SDK 58; a execução em iPhone físico ainda precisa ser validada no aparelho. Não use o comando de web para substituir o aplicativo nativo.
+Atualize o **Expo Go da App Store com suporte ao SDK 58**. Abra a Câmera do iPhone, escaneie o QR e escolha abrir no Expo Go. Permita acesso à rede local em Ajustes → Apps → Expo Go → Rede Local. O iPhone e o Windows precisam estar na mesma rede Wi-Fi. A base da Fase 2.3 foi validada no iPhone pelo responsável; este refinamento de interface ainda precisa de validação física conforme o novo roteiro. Não use o comando de web para substituir o aplicativo nativo.
 
 Reinicie o Expo com cache limpo após mudar variáveis:
 

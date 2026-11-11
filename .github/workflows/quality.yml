@@ -11,6 +11,7 @@ on:
         feature/fase-2-2-autenticacao,
         feature/fase-2-2-visual,
         feature/fase-2-3-prestadores,
+        feature/fase-2-3-ux-prestador,
       ]
 permissions:
   contents: read
