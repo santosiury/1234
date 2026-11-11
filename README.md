@@ -1,6 +1,8 @@
-# Omini · Autenticação (Fase 2.2)
+# Omini · Identidade visual (Fase 2.2.V)
 
 Marketplace mobile de serviços para Araranguá, SC. **Um aplicativo Android/iOS, duas experiências demonstrativas.** Há cadastro, login e sessão segura; contratação e avaliações continuam indisponíveis, e o catálogo de profissionais permanece demonstrativo. Não é PWA. O backend não depende do SQL Server para iniciar no modo demonstrativo. A fundação de persistência da Fase 2.1 está preparada; consulte [o guia de banco](docs/fase-2-1-persistencia.md) antes de qualquer deploy de migrations.
+
+Redesign visual em `feature/fase-2-2-visual`, baseado em `21ad687`: marca vetorial, preto/branco/verde-lima, Inter local e splash Expo SDK 58. Consulte [o guia visual e o roteiro de validação no iPhone](docs/fase-2-2-visual.md). Autenticação, SecureStore e banco permanecem preservados; esta etapa não requer migrations.
 
 ## Estrutura
 
@@ -33,7 +35,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch feature/fase-2-2-autenticacao
+git switch feature/fase-2-2-visual
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env
@@ -94,6 +96,7 @@ npm run build:api
 npm run prisma:validate -w @omini/api
 npm run check:migrations -w @omini/api
 npm run check:routes
+npm run check:brand
 npm run check:secrets
 npm run check:dependencies -w @omini/mobile
 npm run doctor -w @omini/mobile
