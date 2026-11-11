@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 const base = new URL("../apps/mobile/", import.meta.url);
 for (const name of ["light", "dark"]) {
@@ -8,7 +9,7 @@ for (const name of ["light", "dark"]) {
     new URL(`assets/brand/wordmark-${name}.svg`, base),
     "utf8",
   );
-  const metadata = await sharp(png.pathname).metadata();
+  const metadata = await sharp(fileURLToPath(png)).metadata();
   assert.equal(metadata.width, 1749);
   assert.equal(metadata.height, 444);
   assert.equal(metadata.hasAlpha, true);
@@ -19,7 +20,7 @@ for (const name of ["light", "dark"]) {
   );
 }
 const splash = await sharp(
-  new URL("assets/brand/splash-lockup.png", base).pathname,
+  fileURLToPath(new URL("assets/brand/splash-lockup.png", base)),
 ).metadata();
 assert.equal(splash.width, 1749);
 assert.equal(splash.height, 624);
@@ -38,7 +39,7 @@ assert.equal(
   180,
   "Keep complete lockup inside Android 12's circular splash safe zone",
 );
-await sharp(new URL(plugin.image, base).pathname).metadata();
+await sharp(fileURLToPath(new URL(plugin.image, base))).metadata();
 console.log(
   "Brand assets OK: vector outlines, transparent 3x PNGs, lockup, iOS/Android launch configuration.",
 );
