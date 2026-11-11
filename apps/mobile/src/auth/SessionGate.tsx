@@ -1,17 +1,23 @@
 import type { PropsWithChildren } from "react";
-import { ActivityIndicator, Modal, Text } from "react-native";
+import { Modal } from "react-native";
 import { useSession } from "./session";
-import { ScreenContainer, ui } from "../components/ui";
-export function SessionGate({ children }: PropsWithChildren) {
+import { OminiLoadingState } from "../components/Brand";
+export function SessionGate({
+  children,
+  fontsReady = true,
+}: PropsWithChildren<{ fontsReady?: boolean }>) {
   const { state } = useSession();
   return (
     <>
       {children}
-      <Modal visible={state.status === "loading"} animationType="none">
-        <ScreenContainer>
-          <ActivityIndicator accessibilityLabel="Restaurando sessão" />
-          <Text style={ui.text}>Restaurando sua sessão com segurança…</Text>
-        </ScreenContainer>
+      <Modal
+        visible={!fontsReady || state.status === "loading"}
+        animationType="none"
+        statusBarTranslucent
+        navigationBarTranslucent
+        presentationStyle="fullScreen"
+      >
+        <OminiLoadingState restoring={state.status === "loading"} />
       </Modal>
     </>
   );

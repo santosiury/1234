@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { Switch, Text, TextInput, View } from "react-native";
+import { Switch, Text, View } from "react-native";
 import { Redirect, router } from "expo-router";
 import { AuthApi, AuthFailure } from "./api";
 import { useSession } from "./session";
-import { Header, PrimaryButton, ScreenContainer, ui } from "../components/ui";
+import {
+  Header,
+  PrimaryButton,
+  ScreenContainer,
+  OminiInput,
+  Feedback,
+  ui,
+} from "../components/ui";
+import { theme } from "../theme";
 export function AuthForm({ register = false }: { register?: boolean }) {
   const { manager, state } = useSession();
   const [name, setName] = useState("");
@@ -88,26 +96,25 @@ export function AuthForm({ register = false }: { register?: boolean }) {
         }
         back
       />
-      {!!state.message && !message && (
-        <Text accessibilityRole="alert" style={ui.text}>
-          {state.message}
-        </Text>
-      )}
+      {!!state.message && !message && <Feedback message={state.message} />}
       {!created && (
         <>
           {register && (
-            <TextInput
+            <OminiInput
+              label="Seu nome"
+              icon="person-outline"
               accessibilityLabel="Nome"
               value={name}
               onChangeText={setName}
               placeholder="Seu nome"
               maxLength={120}
               autoComplete="name"
-              style={ui.input}
               editable={!busy}
             />
           )}
-          <TextInput
+          <OminiInput
+            label="E-mail"
+            icon="mail-outline"
             accessibilityLabel="E-mail"
             value={email}
             onChangeText={setEmail}
@@ -117,10 +124,16 @@ export function AuthForm({ register = false }: { register?: boolean }) {
             autoCorrect={false}
             autoComplete="email"
             maxLength={254}
-            style={ui.input}
             editable={!busy}
           />
-          <TextInput
+          <OminiInput
+            label="Senha"
+            icon="lock-closed-outline"
+            hint={
+              register
+                ? "Use de 12 a 128 caracteres. Evite senhas reutilizadas."
+                : undefined
+            }
             accessibilityLabel="Senha"
             value={password}
             onChangeText={setPassword}
@@ -131,12 +144,11 @@ export function AuthForm({ register = false }: { register?: boolean }) {
             autoComplete={register ? "new-password" : "current-password"}
             textContentType={register ? "newPassword" : "password"}
             maxLength={128}
-            style={ui.input}
             editable={!busy}
           />
           {register && (
             <View style={ui.card}>
-              <Text style={ui.section}>Como deseja usar o Omini?</Text>
+              <Text style={ui.section}>Uma conta. Seu jeito de usar.</Text>
               <View style={ui.row}>
                 <Text style={[ui.text, { flex: 1 }]}>Cliente</Text>
                 <Switch
@@ -144,6 +156,8 @@ export function AuthForm({ register = false }: { register?: boolean }) {
                   value={client}
                   onValueChange={setClient}
                   disabled={busy}
+                  trackColor={theme.switch}
+                  thumbColor={theme.colors.ink}
                 />
               </View>
               <View style={ui.row}>
@@ -153,6 +167,8 @@ export function AuthForm({ register = false }: { register?: boolean }) {
                   value={provider}
                   onValueChange={setProvider}
                   disabled={busy}
+                  trackColor={theme.switch}
+                  thumbColor={theme.colors.ink}
                 />
               </View>
               <Text style={ui.text}>
@@ -167,15 +183,7 @@ export function AuthForm({ register = false }: { register?: boolean }) {
           />
         </>
       )}
-      {!!message && (
-        <Text
-          accessibilityRole="alert"
-          accessibilityLiveRegion="polite"
-          style={ui.text}
-        >
-          {message}
-        </Text>
-      )}
+      {!!message && <Feedback message={message} error={!created} />}
       <PrimaryButton
         secondary
         disabled={busy}

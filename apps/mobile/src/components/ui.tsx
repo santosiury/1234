@@ -1,67 +1,131 @@
-import type { ComponentProps, PropsWithChildren } from "react";
+import { useState, type ComponentProps, type PropsWithChildren } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
+  type StyleProp,
+  type ViewStyle,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import type { DemoProfessional, ServiceCategory } from "@omini/shared";
 import { theme } from "../theme";
+import { BrandLogo } from "./Brand";
+
+type IconName = ComponentProps<typeof Ionicons>["name"];
 export const ui = StyleSheet.create({
   title: {
-    fontSize: 30,
-    fontWeight: "800",
+    fontSize: theme.type.title,
+    fontFamily: theme.fonts.bold,
     color: theme.colors.ink,
-    letterSpacing: -1,
+    letterSpacing: -1.3,
+    lineHeight: 39,
   },
-  section: { fontSize: 20, fontWeight: "700", color: theme.colors.ink },
-  text: { fontSize: 16, lineHeight: 24, color: theme.colors.muted },
+  section: {
+    fontSize: theme.type.section,
+    fontFamily: theme.fonts.semibold,
+    color: theme.colors.ink,
+    letterSpacing: -0.6,
+    lineHeight: 27,
+  },
+  text: {
+    fontSize: theme.type.body,
+    fontFamily: theme.fonts.regular,
+    lineHeight: 24,
+    color: theme.colors.muted,
+  },
+  small: {
+    fontSize: theme.type.small,
+    fontFamily: theme.fonts.regular,
+    lineHeight: 21,
+    color: theme.colors.muted,
+  },
   label: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: theme.type.caption,
+    fontFamily: theme.fonts.semibold,
     letterSpacing: 1.2,
-    color: theme.colors.primary,
+    color: theme.colors.muted,
+    lineHeight: 18,
   },
   card: {
-    padding: 20,
-    borderRadius: 20,
+    padding: theme.space.md,
+    borderRadius: theme.radii.card,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    gap: 12,
+    gap: theme.space.sm,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  row: { flexDirection: "row", alignItems: "center", gap: theme.space.sm },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: theme.space.sm },
+  group: { gap: theme.space.sm },
+  darkCard: {
+    padding: theme.space.lg,
+    borderRadius: theme.radii.card,
+    backgroundColor: theme.colors.dark,
+    gap: theme.space.sm,
+  },
+  onDark: { color: theme.colors.onDark },
+  onDarkMuted: { color: theme.colors.onDarkMuted },
   input: {
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 16,
+    flex: 1,
+    minWidth: 0,
+    paddingVertical: 16,
+    fontSize: theme.type.body,
+    fontFamily: theme.fonts.regular,
     color: theme.colors.ink,
   },
 });
-export function ScreenContainer({ children }: PropsWithChildren) {
+
+export function ScreenContainer({
+  children,
+  dark = false,
+}: PropsWithChildren<{ dark?: boolean }>) {
+  const insets = useSafeAreaInsets();
   return (
     <SafeAreaView
       edges={["top", "left", "right"]}
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      style={{
+        flex: 1,
+        backgroundColor: dark ? theme.colors.dark : theme.colors.background,
+      }}
     >
+      <StatusBar style={dark ? "light" : "dark"} />
       <ScrollView
+        keyboardDismissMode="on-drag"
         automaticallyAdjustKeyboardInsets
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: 20, gap: 24, paddingBottom: 40 }}
+        contentContainerStyle={{
+          padding: theme.space.md,
+          gap: theme.space.lg,
+          paddingBottom: theme.space.lg + insets.bottom,
+          flexGrow: 1,
+        }}
       >
-        {children}
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 620,
+            alignSelf: "center",
+            gap: theme.space.lg,
+            flexGrow: 1,
+          }}
+        >
+          {children}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
 export function Header({
   title,
   subtitle,
@@ -72,89 +136,303 @@ export function Header({
   back?: boolean;
 }) {
   return (
-    <View style={{ gap: 8 }}>
-      {back && (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Voltar"
-          hitSlop={12}
-          onPress={() =>
-            router.canGoBack() ? router.back() : router.replace("/")
-          }
-        >
-          <Ionicons name="arrow-back" size={26} color={theme.colors.primary} />
-        </Pressable>
-      )}
-      <Text style={ui.label}>OMINI · ARARANGUÁ, SC</Text>
-      <Text accessibilityRole="header" style={ui.title}>
-        {title}
-      </Text>
-      {subtitle && <Text style={ui.text}>{subtitle}</Text>}
+    <View style={{ gap: theme.space.md }}>
+      <View
+        style={[ui.row, { justifyContent: "space-between", minHeight: 44 }]}
+      >
+        <View style={ui.row}>
+          {back && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+              onPress={() =>
+                router.canGoBack() ? router.back() : router.replace("/")
+              }
+              style={({ pressed }) => ({
+                minHeight: 44,
+                minWidth: 44,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: theme.radii.pill,
+                backgroundColor: pressed
+                  ? theme.colors.border
+                  : theme.colors.surface,
+              })}
+            >
+              <Ionicons name="arrow-back" size={21} color={theme.colors.ink} />
+            </Pressable>
+          )}
+          <BrandLogo width={104} />
+        </View>
+        <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
+          <Text style={ui.label}>ARARANGUÁ</Text>
+          <Text style={ui.small}>Santa Catarina</Text>
+        </View>
+      </View>
+      <View style={{ gap: theme.space.xs }}>
+        <Text accessibilityRole="header" style={ui.title}>
+          {title}
+        </Text>
+        {subtitle && <Text style={ui.text}>{subtitle}</Text>}
+      </View>
     </View>
   );
 }
+
 export function PrimaryButton({
   title,
   onPress,
   secondary = false,
   loading = false,
   disabled = false,
+  variant,
+  icon,
 }: {
   title: string;
   onPress: () => void;
   secondary?: boolean;
   loading?: boolean;
   disabled?: boolean;
+  variant?: "lime" | "dark" | "outline" | "ghost" | "danger";
+  icon?: IconName;
 }) {
+  const kind = variant ?? (secondary ? "outline" : "lime");
+  const background =
+    kind === "lime"
+      ? theme.colors.accent
+      : kind === "dark"
+        ? theme.colors.dark
+        : kind === "danger"
+          ? theme.colors.dangerSurface
+          : kind === "ghost"
+            ? "transparent"
+            : theme.colors.surface;
+  const foreground =
+    kind === "dark"
+      ? theme.colors.onDark
+      : kind === "danger"
+        ? theme.colors.danger
+        : theme.colors.ink;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={title}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
       onPress={onPress}
       disabled={disabled || loading}
       style={({ pressed }) => ({
-        borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 20,
+        borderRadius: theme.radii.medium,
+        paddingVertical: theme.space.md - 3,
+        paddingHorizontal: theme.space.md,
         alignItems: "center",
         justifyContent: "center",
-        minHeight: 52,
-        backgroundColor: secondary ? theme.colors.pale : theme.colors.primary,
-        opacity: disabled ? 0.55 : pressed ? 0.8 : 1,
+        minHeight: 56,
+        backgroundColor: disabled ? theme.colors.disabled : background,
+        borderWidth: kind === "outline" ? 1 : 0,
+        borderColor: theme.colors.border,
+        opacity: pressed ? 0.76 : 1,
       })}
     >
-      {loading ? (
-        <ActivityIndicator color={secondary ? theme.colors.primary : "white"} />
-      ) : (
+      <View style={[ui.row, { justifyContent: "center" }]}>
+        {loading && (
+          <ActivityIndicator
+            accessibilityLabel="Carregando"
+            color={foreground}
+            size="small"
+          />
+        )}
+        {!loading && icon && (
+          <Ionicons name={icon} size={20} color={foreground} />
+        )}
         <Text
           style={{
-            color: secondary ? theme.colors.primary : "white",
-            fontSize: 16,
-            fontWeight: "700",
+            color: disabled ? theme.colors.muted : foreground,
+            fontSize: theme.type.body,
+            fontFamily: theme.fonts.semibold,
             textAlign: "center",
+            flexShrink: 1,
           }}
         >
           {title}
         </Text>
-      )}
+      </View>
     </Pressable>
   );
 }
+
+export function OminiInput({
+  label,
+  icon,
+  hint,
+  error,
+  ...props
+}: ComponentProps<typeof TextInput> & {
+  label?: string;
+  icon?: IconName;
+  hint?: string;
+  error?: boolean;
+}) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={{ gap: theme.space.xs }}>
+      {label && (
+        <Text
+          style={{
+            fontFamily: theme.fonts.semibold,
+            fontSize: theme.type.small,
+            color: theme.colors.ink,
+          }}
+        >
+          {label}
+        </Text>
+      )}
+      <View
+        style={[
+          ui.row,
+          {
+            backgroundColor: theme.colors.surface,
+            borderWidth: 1,
+            borderColor: error
+              ? theme.colors.danger
+              : focused
+                ? theme.colors.focus
+                : theme.colors.inputBorder,
+            borderRadius: theme.radii.medium,
+            paddingHorizontal: theme.space.md,
+            minHeight: 56,
+          },
+        ]}
+      >
+        {icon && (
+          <Ionicons
+            name={icon}
+            size={20}
+            color={focused ? theme.colors.ink : theme.colors.muted}
+          />
+        )}
+        <TextInput
+          {...props}
+          placeholderTextColor={theme.colors.muted}
+          selectionColor={theme.colors.focus}
+          style={[ui.input, props.style]}
+          onFocus={(e) => {
+            setFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            props.onBlur?.(e);
+          }}
+        />
+      </View>
+      {hint && <Text style={ui.small}>{hint}</Text>}
+    </View>
+  );
+}
+
+export function Badge({
+  children,
+  dark = false,
+}: PropsWithChildren<{ dark?: boolean }>) {
+  return (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        backgroundColor: dark ? theme.colors.darkSurface : theme.colors.pale,
+        borderRadius: theme.radii.pill,
+        paddingHorizontal: theme.space.sm,
+        paddingVertical: theme.space.xxs + 2,
+      }}
+    >
+      <Text
+        style={{
+          color: dark ? theme.colors.accent : theme.colors.ink,
+          fontFamily: theme.fonts.semibold,
+          fontSize: theme.type.caption,
+          lineHeight: 18,
+        }}
+      >
+        {children}
+      </Text>
+    </View>
+  );
+}
+
+export function Feedback({
+  message,
+  error = true,
+}: {
+  message: string;
+  error?: boolean;
+}) {
+  return (
+    <View
+      style={[
+        ui.card,
+        {
+          backgroundColor: error
+            ? theme.colors.dangerSurface
+            : theme.colors.pale,
+          borderWidth: 0,
+        },
+      ]}
+    >
+      <View style={[ui.row, { alignItems: "flex-start" }]}>
+        <Ionicons
+          name={error ? "alert-circle-outline" : "checkmark-circle-outline"}
+          size={21}
+          color={error ? theme.colors.danger : theme.colors.success}
+        />
+        <Text
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite"
+          style={[
+            ui.small,
+            { flex: 1, color: error ? theme.colors.danger : theme.colors.ink },
+          ]}
+        >
+          {message}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 export function EmptyState({
   title,
   description,
+  icon = "file-tray-outline",
 }: {
   title: string;
   description: string;
+  icon?: IconName;
 }) {
   return (
-    <View style={[ui.card, { alignItems: "center", paddingVertical: 36 }]}>
-      <Ionicons name="leaf-outline" size={36} color={theme.colors.primary} />
+    <View
+      style={[
+        ui.card,
+        {
+          alignItems: "center",
+          paddingVertical: theme.space.xl,
+          gap: theme.space.md,
+        },
+      ]}
+    >
+      <View
+        style={{
+          padding: theme.space.md,
+          backgroundColor: theme.colors.background,
+          borderRadius: theme.radii.card,
+        }}
+      >
+        <Ionicons name={icon} size={30} color={theme.colors.ink} />
+      </View>
       <Text style={[ui.section, { textAlign: "center" }]}>{title}</Text>
       <Text style={[ui.text, { textAlign: "center" }]}>{description}</Text>
     </View>
   );
 }
+
 export function ServiceCategoryCard({
   category,
   onPress,
@@ -165,22 +443,81 @@ export function ServiceCategoryCard({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={category.name}
       onPress={onPress}
-      style={[ui.card, { width: "48%", minHeight: 128 }]}
+      style={({ pressed }) => [
+        ui.card,
+        {
+          flexBasis: "46%",
+          flexGrow: 1,
+          minWidth: 120,
+          minHeight: 144,
+          backgroundColor: pressed ? theme.colors.pale : theme.colors.surface,
+          justifyContent: "space-between",
+        },
+      ]}
     >
-      <Ionicons
-        name={category.icon as ComponentProps<typeof Ionicons>["name"]}
-        size={28}
-        color={theme.colors.primary}
-      />
+      <View
+        style={{
+          alignSelf: "flex-start",
+          padding: theme.space.sm,
+          backgroundColor: theme.colors.pale,
+          borderRadius: theme.radii.small,
+        }}
+      >
+        <Ionicons
+          name={category.icon as IconName}
+          size={24}
+          color={theme.colors.ink}
+        />
+      </View>
       <Text
-        style={{ fontSize: 15, fontWeight: "600", color: theme.colors.ink }}
+        style={{
+          fontSize: theme.type.small,
+          lineHeight: 21,
+          fontFamily: theme.fonts.semibold,
+          color: theme.colors.ink,
+        }}
       >
         {category.name}
       </Text>
     </Pressable>
   );
 }
+
+export function Avatar({
+  initials,
+  large = false,
+}: {
+  initials: string;
+  large?: boolean;
+}) {
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={{
+        width: large ? 84 : 56,
+        height: large ? 84 : 56,
+        borderRadius: large ? theme.radii.card : theme.radii.medium,
+        backgroundColor: theme.colors.pale,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: theme.fonts.bold,
+          fontSize: large ? 30 : 18,
+          color: theme.colors.ink,
+        }}
+      >
+        {initials}
+      </Text>
+    </View>
+  );
+}
+
 export function ProfessionalCard({
   professional,
 }: {
@@ -196,47 +533,182 @@ export function ProfessionalCard({
           params: { id: professional.id },
         })
       }
-      style={ui.card}
+      style={({ pressed }) => [
+        ui.card,
+        { backgroundColor: pressed ? theme.colors.pale : theme.colors.surface },
+      ]}
     >
       <View style={ui.row}>
-        <View
-          style={{
-            backgroundColor: theme.colors.pale,
-            padding: 16,
-            borderRadius: 18,
-          }}
-        >
-          <Text style={ui.section}>{professional.initials}</Text>
+        <Avatar initials={professional.initials} />
+        <View style={{ flex: 1, gap: theme.space.xxs }}>
+          <Text
+            style={{
+              fontSize: 17,
+              fontFamily: theme.fonts.semibold,
+              color: theme.colors.ink,
+            }}
+          >
+            {professional.name}
+          </Text>
+          <Text style={ui.small}>{professional.specialty}</Text>
         </View>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text style={ui.section}>{professional.name}</Text>
-          <Text style={ui.text}>{professional.specialty}</Text>
-        </View>
-        <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
+        <Ionicons name="chevron-forward" size={18} color={theme.colors.ink} />
       </View>
-      <Text style={ui.text}>{professional.neighborhood} · Perfil fictício</Text>
+      <View
+        style={[ui.row, { flexWrap: "wrap", justifyContent: "space-between" }]}
+      >
+        <Text style={ui.small}>{professional.neighborhood}</Text>
+        <Badge>Perfil fictício</Badge>
+      </View>
     </Pressable>
   );
 }
-export function DemoNotice() {
+
+export function DemoNotice({ dark = false }: { dark?: boolean }) {
   return (
     <View
-      style={{
-        backgroundColor: theme.colors.accent,
-        padding: 12,
-        borderRadius: 12,
-      }}
+      style={[
+        ui.row,
+        {
+          alignItems: "flex-start",
+          backgroundColor: dark
+            ? theme.colors.darkSurface
+            : theme.colors.surface,
+          padding: theme.space.sm,
+          borderRadius: theme.radii.small,
+        },
+      ]}
     >
-      <Text style={{ color: theme.colors.ink, fontSize: 13, lineHeight: 19 }}>
+      <Ionicons
+        name="information-circle-outline"
+        color={dark ? theme.colors.accent : theme.colors.muted}
+        size={19}
+      />
+      <Text
+        style={[
+          ui.small,
+          {
+            flex: 1,
+            fontSize: theme.type.caption,
+            lineHeight: 18,
+            color: dark ? theme.colors.onDarkMuted : theme.colors.muted,
+          },
+        ]}
+      >
         Catálogo demonstrativo · profissionais fictícios e contratação ainda
         indisponível.
       </Text>
     </View>
   );
 }
+
+export function SectionHeading({
+  title,
+  action,
+  onPress,
+}: {
+  title: string;
+  action?: string;
+  onPress?: () => void;
+}) {
+  return (
+    <View
+      style={[
+        ui.row,
+        {
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+        },
+      ]}
+    >
+      <Text accessibilityRole="header" style={[ui.section, { flexShrink: 1 }]}>
+        {title}
+      </Text>
+      {action && onPress && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={action}
+          onPress={onPress}
+          style={({ pressed }) => ({
+            minHeight: 44,
+            justifyContent: "center",
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Text
+            style={{
+              fontFamily: theme.fonts.semibold,
+              fontSize: theme.type.small,
+              color: theme.colors.ink,
+            }}
+          >
+            {action} ↗
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+export function ActionRow({
+  title,
+  description,
+  icon,
+  onPress,
+  style,
+}: {
+  title: string;
+  description?: string;
+  icon: IconName;
+  onPress: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      onPress={onPress}
+      style={({ pressed }) => [
+        ui.card,
+        ui.row,
+        {
+          minHeight: 80,
+          backgroundColor: pressed ? theme.colors.pale : theme.colors.surface,
+        },
+        style,
+      ]}
+    >
+      <View
+        style={{
+          padding: theme.space.sm,
+          borderRadius: theme.radii.small,
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <Ionicons name={icon} size={23} color={theme.colors.ink} />
+      </View>
+      <View style={{ flex: 1, gap: theme.space.xxs }}>
+        <Text
+          style={{
+            fontFamily: theme.fonts.semibold,
+            fontSize: theme.type.body,
+            color: theme.colors.ink,
+          }}
+        >
+          {title}
+        </Text>
+        {description && <Text style={ui.small}>{description}</Text>}
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={theme.colors.ink} />
+    </Pressable>
+  );
+}
+
 export function FutureFeature({ title }: { title: string }) {
   return (
     <>
+      <Badge>Área demonstrativa</Badge>
       <EmptyState
         title={title}
         description="Esta funcionalidade ainda não está disponível. Nenhuma solicitação será criada nesta demonstração."

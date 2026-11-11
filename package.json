@@ -18,7 +18,9 @@
     "test": "npm run test --workspaces --if-present",
     "check:routes": "node scripts/check-routes.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
-    "prisma:generate": "npm run prisma:generate -w @omini/api"
+    "prisma:generate": "npm run prisma:generate -w @omini/api",
+    "assets:brand": "node scripts/generate-brand-assets.mjs",
+    "check:brand": "node scripts/check-brand-assets.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
@@ -27,6 +29,7 @@
     "prettier": "^3.9.10",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "sharp": "^0.34.5",
     "typescript": "~5.9.2",
     "typescript-eslint": "^8.46.0"
   },

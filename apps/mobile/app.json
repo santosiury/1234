@@ -13,6 +13,22 @@
         {
           "configureAndroidBackup": true
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#101010",
+          "image": "./assets/brand/splash-lockup.png",
+          "imageWidth": 280,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#101010",
+            "image": "./assets/brand/splash-lockup.png"
+          },
+          "android": {
+            "imageWidth": 180
+          }
+        }
       ]
     ],
     "ios": {
@@ -24,6 +40,7 @@
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "backgroundColor": "#101010"
   }
 }

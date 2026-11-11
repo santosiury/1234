@@ -86,6 +86,12 @@ test("registration form validates, submits both profiles and logs into the same 
   await fireEvent.press(screen.getByText("Sair da conta"));
   expect(await screen.findByText("Entrar na minha conta")).toBeTruthy();
   expect(api.logoutCalls).toHaveLength(1);
+  expect(
+    screen.queryByText("Pessoa Teste", { includeHiddenElements: true }),
+  ).toBeNull();
+  expect(
+    screen.queryByText("pessoa@example.test", { includeHiddenElements: true }),
+  ).toBeNull();
 });
 test("client-only account cannot enter provider until its profile is enrolled", async () => {
   await renderRouter(routes, { initialUrl: "/login" });

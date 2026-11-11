@@ -1,10 +1,10 @@
 import { useSession } from "../../src/auth/session";
 import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
-import Ionicons from "@expo/vector-icons/Ionicons";
+import { TabIcon, useTabBarOptions } from "../../src/components/TabIcon";
 import { useMode } from "../../src/mode";
-import { theme } from "../../src/theme";
 export default function Layout() {
+  const tabBarOptions = useTabBarOptions();
   const { mode } = useMode();
   const { state } = useSession();
   if (mode !== "client")
@@ -22,24 +22,13 @@ export default function Layout() {
       />
     );
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.muted,
-        tabBarStyle: { backgroundColor: "white" },
-      }}
-    >
+    <Tabs screenOptions={tabBarOptions}>
       <Tabs.Screen
         name="index"
         options={{
           title: "Início",
           tabBarIcon: ({ focused, size }) => (
-            <Ionicons
-              name="home-outline"
-              color={focused ? theme.colors.primary : theme.colors.muted}
-              size={size}
-            />
+            <TabIcon name="home-outline" focused={focused} size={size} />
           ),
         }}
       />
@@ -48,11 +37,7 @@ export default function Layout() {
         options={{
           title: "Buscar",
           tabBarIcon: ({ focused, size }) => (
-            <Ionicons
-              name="search-outline"
-              color={focused ? theme.colors.primary : theme.colors.muted}
-              size={size}
-            />
+            <TabIcon name="search-outline" focused={focused} size={size} />
           ),
         }}
       />
@@ -61,11 +46,7 @@ export default function Layout() {
         options={{
           title: "Categorias",
           tabBarIcon: ({ focused, size }) => (
-            <Ionicons
-              name="grid-outline"
-              color={focused ? theme.colors.primary : theme.colors.muted}
-              size={size}
-            />
+            <TabIcon name="grid-outline" focused={focused} size={size} />
           ),
         }}
       />
@@ -74,11 +55,7 @@ export default function Layout() {
         options={{
           title: "Solicitações",
           tabBarIcon: ({ focused, size }) => (
-            <Ionicons
-              name="chatbubbles-outline"
-              color={focused ? theme.colors.primary : theme.colors.muted}
-              size={size}
-            />
+            <TabIcon name="chatbubbles-outline" focused={focused} size={size} />
           ),
         }}
       />
@@ -87,11 +64,7 @@ export default function Layout() {
         options={{
           title: "Perfil",
           tabBarIcon: ({ focused, size }) => (
-            <Ionicons
-              name="person-outline"
-              color={focused ? theme.colors.primary : theme.colors.muted}
-              size={size}
-            />
+            <TabIcon name="person-outline" focused={focused} size={size} />
           ),
         }}
       />

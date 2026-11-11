@@ -5,7 +5,16 @@ import { Text, View } from "react-native";
 import { router } from "expo-router";
 import type { HealthResponse } from "@omini/shared";
 import { useMode } from "../mode";
-import { ScreenContainer, Header, DemoNotice, PrimaryButton, ui } from "./ui";
+import {
+  ScreenContainer,
+  Header,
+  DemoNotice,
+  PrimaryButton,
+  Avatar,
+  Badge,
+  Feedback,
+  ui,
+} from "./ui";
 export function Profile() {
   const { mode, setMode } = useMode();
   const { state, manager } = useSession();
@@ -65,46 +74,71 @@ export function Profile() {
           mode === "client" ? "Seu espaço no Omini" : "Seu perfil profissional"
         }
       />
-      <DemoNotice />
       {state.user ? (
-        <View style={ui.card}>
-          <Text style={ui.section}>{state.user.displayName}</Text>
-          <Text style={ui.text}>{state.user.email}</Text>
-          <Text style={ui.text}>
-            Perfis ativos:{" "}
-            {[
-              state.user.profiles.client ? "cliente" : "",
-              state.user.profiles.provider ? "prestador" : "",
-            ]
-              .filter(Boolean)
-              .join(" e ") || "nenhum"}
-          </Text>
-          {(["client", "provider"] as const)
-            .filter((role) => role !== mode)
-            .map((role) =>
-              state.user!.profiles[role] ? (
-                <PrimaryButton
-                  key={role}
-                  secondary
-                  disabled={accountBusy}
-                  title={`Mudar para ${role === "client" ? "cliente" : "prestador"}`}
-                  onPress={() => {
-                    setMode(role);
-                    router.replace(role === "client" ? "/client" : "/provider");
-                  }}
-                />
-              ) : (
-                <PrimaryButton
-                  key={role}
-                  secondary
-                  loading={accountBusy}
-                  title={`Adicionar perfil de ${role === "client" ? "cliente" : "prestador"}`}
-                  onPress={() =>
-                    void accountAction(() => manager.addProfile(role))
-                  }
-                />
-              ),
-            )}
+        <View style={ui.group}>
+          <View style={ui.darkCard}>
+            <View
+              style={[
+                ui.row,
+                { flexWrap: "wrap", justifyContent: "space-between" },
+              ]}
+            >
+              <Avatar
+                initials={state.user.displayName
+                  .split(/\s+/)
+                  .map((part) => part[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase()}
+                large
+              />
+              <Badge dark>Conta autenticada</Badge>
+            </View>
+            <Text style={[ui.section, ui.onDark]}>
+              {state.user.displayName}
+            </Text>
+            <Text style={[ui.text, ui.onDarkMuted]}>{state.user.email}</Text>
+          </View>
+          <View style={ui.card}>
+            <Text style={ui.section}>Uma conta, duas experiências</Text>
+            <Text style={ui.text}>
+              Perfis ativos:{" "}
+              {[
+                state.user.profiles.client ? "cliente" : "",
+                state.user.profiles.provider ? "prestador" : "",
+              ]
+                .filter(Boolean)
+                .join(" e ") || "nenhum"}
+            </Text>
+            {(["client", "provider"] as const)
+              .filter((role) => role !== mode)
+              .map((role) =>
+                state.user!.profiles[role] ? (
+                  <PrimaryButton
+                    key={role}
+                    secondary
+                    disabled={accountBusy}
+                    title={`Mudar para ${role === "client" ? "cliente" : "prestador"}`}
+                    onPress={() => {
+                      setMode(role);
+                      router.replace(
+                        role === "client" ? "/client" : "/provider",
+                      );
+                    }}
+                  />
+                ) : (
+                  <PrimaryButton
+                    key={role}
+                    secondary
+                    loading={accountBusy}
+                    title={`Adicionar perfil de ${role === "client" ? "cliente" : "prestador"}`}
+                    onPress={() =>
+                      void accountAction(() => manager.addProfile(role))
+                    }
+                  />
+                ),
+              )}
+          </View>
           <PrimaryButton
             secondary
             title="Atualizar conta"
@@ -112,6 +146,8 @@ export function Profile() {
             onPress={() => void accountAction(() => manager.sync())}
           />
           <PrimaryButton
+            variant="danger"
+            icon="log-out-outline"
             title="Sair da conta"
             loading={accountBusy}
             onPress={() => void accountAction(() => manager.logout(), true)}
@@ -119,12 +155,13 @@ export function Profile() {
         </View>
       ) : (
         <>
-          <View style={ui.card}>
-            <Text style={ui.section}>
+          <View style={ui.darkCard}>
+            <Badge dark>Exploração sem login</Badge>
+            <Text style={[ui.section, ui.onDark]}>
               Você está explorando como{" "}
               {mode === "client" ? "cliente" : "prestador"}
             </Text>
-            <Text style={ui.text}>
+            <Text style={[ui.text, ui.onDarkMuted]}>
               Esta navegação é demonstrativa. Entre ou cadastre uma conta para
               acessar seu perfil real.
             </Text>
@@ -142,18 +179,20 @@ export function Profile() {
             title="Entrar na minha conta"
             onPress={() => router.push("/login")}
           />
+          <PrimaryButton
+            secondary
+            title="Cadastrar no Omini"
+            onPress={() => router.push("/register")}
+          />
         </>
       )}
-      {!!accountMessage && (
-        <Text accessibilityRole="alert" style={ui.text}>
-          {accountMessage}
-        </Text>
-      )}
+      {!!accountMessage && <Feedback message={accountMessage} />}
       <PrimaryButton
         secondary
         title="Voltar às boas-vindas"
         onPress={() => router.replace("/")}
       />
+      <DemoNotice />
       <View style={ui.card}>
         <Text style={ui.section}>Conexão com a API</Text>
         <Text style={ui.text}>

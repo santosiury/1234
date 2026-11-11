@@ -9,6 +9,7 @@ on:
         fix/expo-sdk-58-ios,
         feature/fase-2-1-sqlserver-prisma,
         feature/fase-2-2-autenticacao,
+        feature/fase-2-2-visual,
       ]
 permissions:
   contents: read
@@ -26,6 +27,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build:api
+      - run: npm run check:brand
       - run: npm run check:routes
       - run: npm run check:secrets
       - run: npm run check:dependencies -w @omini/mobile

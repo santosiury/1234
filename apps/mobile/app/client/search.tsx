@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TextInput, Text } from "react-native";
+import { Text } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   ScreenContainer,
@@ -8,6 +8,8 @@ import {
   EmptyState,
   PrimaryButton,
   ui,
+  OminiInput,
+  DemoNotice,
 } from "../../src/components/ui";
 import { categories, professionals } from "../../src/demo/catalog";
 import { filterProfessionals } from "../../src/catalog";
@@ -22,12 +24,12 @@ export default function Search() {
         title="Encontre seu profissional"
         subtitle="Catálogo demonstrativo · Araranguá"
       />
-      <TextInput
+      <OminiInput
+        icon="search-outline"
         accessibilityLabel="Buscar por nome, especialidade ou bairro"
         placeholder="Nome, especialidade ou bairro"
         value={query}
         onChangeText={setQuery}
-        style={ui.input}
         autoCapitalize="none"
       />
       {params.category && (
@@ -37,6 +39,7 @@ export default function Search() {
           onPress={() => router.setParams({ category: undefined })}
         />
       )}
+      <DemoNotice />
       <Text accessibilityLiveRegion="polite" style={ui.text}>
         {found.length} perfis de exemplo
       </Text>

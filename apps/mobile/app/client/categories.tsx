@@ -4,6 +4,8 @@ import {
   ScreenContainer,
   Header,
   ServiceCategoryCard,
+  DemoNotice,
+  ui,
 } from "../../src/components/ui";
 import { categories } from "../../src/demo/catalog";
 export default function Categories() {
@@ -13,7 +15,7 @@ export default function Categories() {
         title="Todo tipo de ajuda"
         subtitle="Escolha uma especialidade para explorar os perfis fictícios."
       />
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      <View style={ui.grid}>
         {categories.map((category) => (
           <ServiceCategoryCard
             key={category.id}
@@ -27,6 +29,7 @@ export default function Categories() {
           />
         ))}
       </View>
+      <DemoNotice />
     </ScreenContainer>
   );
 }
