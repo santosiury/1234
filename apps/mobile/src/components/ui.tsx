@@ -1,4 +1,9 @@
-import { useState, type ComponentProps, type PropsWithChildren } from "react";
+import {
+  useState,
+  type ComponentProps,
+  type PropsWithChildren,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -131,23 +136,32 @@ export function Header({
   title,
   subtitle,
   back = false,
+  onBack,
+  action,
 }: {
   title: string;
   subtitle?: string;
   back?: boolean;
+  onBack?: () => void;
+  action?: ReactNode;
 }) {
   return (
     <View style={{ gap: theme.space.md }}>
       <View
-        style={[ui.row, { justifyContent: "space-between", minHeight: 44 }]}
+        style={[
+          ui.row,
+          { justifyContent: "space-between", minHeight: 44, flexWrap: "wrap" },
+        ]}
       >
         <View style={ui.row}>
           {back && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Voltar"
-              onPress={() =>
-                router.canGoBack() ? router.back() : router.replace("/")
+              onPress={
+                onBack ??
+                (() =>
+                  router.canGoBack() ? router.back() : router.replace("/"))
               }
               style={({ pressed }) => ({
                 minHeight: 44,
@@ -165,10 +179,12 @@ export function Header({
           )}
           <BrandLogo width={104} />
         </View>
-        <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
-          <Text style={ui.label}>ARARANGUÁ</Text>
-          <Text style={ui.small}>Santa Catarina</Text>
-        </View>
+        {action ?? (
+          <View style={{ flexShrink: 1, alignItems: "flex-end" }}>
+            <Text style={ui.label}>ARARANGUÁ</Text>
+            <Text style={ui.small}>Santa Catarina</Text>
+          </View>
+        )}
       </View>
       <View style={{ gap: theme.space.xs }}>
         <Text accessibilityRole="header" style={ui.title}>
@@ -284,22 +300,28 @@ export function TextButton({
   icon,
   light = false,
   expanded,
+  disabled = false,
 }: {
   title: string;
   onPress: () => void;
   icon?: IconName;
   light?: boolean;
   expanded?: boolean;
+  disabled?: boolean;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={title}
-      accessibilityState={expanded === undefined ? undefined : { expanded }}
+      accessibilityState={{
+        disabled,
+        ...(expanded === undefined ? {} : { expanded }),
+      }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         buttonStyles.textAction,
-        { opacity: pressed ? 0.7 : 1 },
+        { opacity: disabled ? 0.55 : pressed ? 0.7 : 1 },
       ]}
     >
       <ButtonContent

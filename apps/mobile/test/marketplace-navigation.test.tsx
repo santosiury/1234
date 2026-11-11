@@ -5,6 +5,7 @@ import {
   screen,
   testRouter,
 } from "expo-router/testing-library";
+import { router } from "expo-router";
 import type {
   CatalogCategory,
   CreateAreaInput,
@@ -57,6 +58,7 @@ function published(): PublicProvider[] {
   return [...own, ...extraProviders];
 }
 beforeEach(() => {
+  category.isActive = true;
   auth = new FakeAuthApi();
   profile = {
     id: "30000000-0000-4000-8000-000000000001",
@@ -230,8 +232,13 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
   await testRouter.push("/client/profile");
   await fireEvent.press(screen.getByText("Adicionar perfil de prestador"));
   await fireEvent.press(await screen.findByText("Mudar para prestador"));
-  await screen.findByText("Complete seu cadastro");
+  await screen.findByRole("button", {
+    name: "Meus serviços. Pendente. Abrir etapa.",
+  });
   await testRouter.push("/provider/profile");
+  await fireEvent.press(
+    await screen.findByText("Editar meu perfil profissional"),
+  );
   await screen.findByLabelText("Nome profissional");
   await fireEvent.changeText(
     screen.getByLabelText("Nome profissional"),
@@ -241,16 +248,23 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
     screen.getByLabelText("Descrição profissional"),
     "Reparos residenciais.",
   );
-  await fireEvent.press(screen.getByText("Salvar perfil profissional"));
+  await fireEvent.press(screen.getByText("Salvar perfil"));
   await screen.findByText("Perfil profissional salvo.");
+  expect(screen.queryByLabelText("Nome profissional")).toBeNull();
+  await fireEvent.press(screen.getByText("Onde atendo"));
+  await screen.findByText("Onde você pode ajudar?");
+  await fireEvent.press(screen.getByText("Adicionar área"));
   await screen.findByLabelText("Bairro atendido");
   await fireEvent.changeText(
     screen.getByLabelText("Bairro atendido"),
     "Centro",
   );
-  await fireEvent.press(screen.getByText("Cadastrar área"));
+  await fireEvent.press(screen.getByText("Salvar área"));
   await screen.findByText("Área de atendimento salva.");
   await testRouter.push("/provider/services");
+  await screen.findByText("Seu primeiro serviço começa aqui");
+  expect(screen.queryByLabelText("Título do serviço")).toBeNull();
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
   await screen.findByLabelText("Título do serviço");
   await fireEvent.press(screen.getByRole("radio", { name: "Eletricista" }));
   await fireEvent.changeText(
@@ -261,32 +275,62 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
     screen.getByLabelText("Descrição do serviço"),
     "Instalações residenciais.",
   );
-  await fireEvent.press(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  );
+  await fireEvent.press(screen.getByText("Salvar serviço"));
   await screen.findByText("Serviço salvo.");
-  await fireEvent.press(await screen.findByText("Editar Reparo elétrico"));
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: /^Gerenciar serviço Reparo elétrico/,
+    }),
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Editar serviço" }));
+  await screen.findByLabelText("Título do serviço");
+  expect(screen.getByLabelText("Descrição do serviço")).toHaveDisplayValue(
+    "Instalações residenciais.",
+  );
   await fireEvent.changeText(
     screen.getByLabelText("Título do serviço"),
     "Instalações elétricas",
   );
-  await fireEvent.press(screen.getByText("Salvar alterações do serviço"));
+  await fireEvent.press(screen.getByText("Salvar serviço"));
   await screen.findByText("Serviço salvo.");
   await fireEvent.press(
-    await screen.findByText("Desativar Instalações elétricas"),
+    await screen.findByRole("button", {
+      name: /^Gerenciar serviço Instalações elétricas/,
+    }),
   );
+  await fireEvent.press(screen.getByText("Desativar serviço"));
+  expect(profile.services[0].isActive).toBe(true);
+  await fireEvent.press(screen.getByText("Confirmar desativação"));
   await screen.findByText("Serviço desativado.");
   expect(published()).toHaveLength(0);
   await fireEvent.press(
-    await screen.findByText("Reativar Instalações elétricas"),
+    await screen.findByRole("button", {
+      name: /^Gerenciar serviço Instalações elétricas/,
+    }),
   );
+  await fireEvent.press(screen.getByText("Reativar serviço"));
+  await fireEvent.press(screen.getByText("Confirmar reativação"));
   await screen.findByText("Serviço reativado.");
-  await testRouter.push("/provider/profile");
-  await fireEvent.press(await screen.findByText("Desativar área Centro"));
+  await testRouter.push("/provider-setup/areas");
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: /^Gerenciar área Araranguá\/SC/,
+    }),
+  );
+  await fireEvent.press(screen.getByText("Desativar área"));
+  await fireEvent.press(screen.getByText("Confirmar desativação"));
   await screen.findByText("Área desativada.");
   expect(published()).toHaveLength(0);
-  await fireEvent.press(await screen.findByText("Reativar área Centro"));
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: /^Gerenciar área Araranguá\/SC/,
+    }),
+  );
+  await fireEvent.press(screen.getByText("Reativar área"));
+  await fireEvent.press(screen.getByText("Confirmar reativação"));
   await screen.findByText("Área reativada.");
+  await testRouter.push("/provider/profile");
+  await fireEvent.press(screen.getByText("Minha conta"));
   await fireEvent.press(screen.getByText("Sair da conta"));
   await screen.findByText("Entrar na minha conta");
   auth.value = {
@@ -403,14 +447,18 @@ test("provider validation avoids writes and expired private sessions return to t
   await login();
   await testRouter.push("/client/profile");
   await fireEvent.press(screen.getByText("Mudar para prestador"));
-  await screen.findByText("Complete seu cadastro");
+  await screen.findByRole("button", {
+    name: "Meus serviços. Pendente. Abrir etapa.",
+  });
   await testRouter.push("/provider/services");
+  await screen.findByText("Seu primeiro serviço começa aqui");
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
   await fireEvent.press(
-    await screen.findByRole("button", { name: "Cadastrar serviço" }),
+    await screen.findByRole("button", { name: "Salvar serviço" }),
   );
   expect(
     await screen.findByText(
-      "Escolha uma categoria ativa e informe título de 2 a 120 caracteres. A descrição aceita até 1000.",
+      "Escolha uma categoria e informe um nome de 2 a 120 caracteres. A descrição aceita até 1000.",
     ),
   ).toBeTruthy();
   expect(profile.services).toHaveLength(0);
@@ -421,12 +469,304 @@ test("provider validation avoids writes and expired private sessions return to t
   );
   auth.forceUnauthorized = true;
   auth.failRefresh = new AuthFailure(401, "SESSION_EXPIRED", "Expired");
-  await fireEvent.press(
-    screen.getByRole("button", { name: "Cadastrar serviço" }),
-  );
+  await fireEvent.press(screen.getByRole("button", { name: "Salvar serviço" }));
   expect(
     await screen.findByText("Sua sessão expirou. Entre novamente."),
   ).toBeTruthy();
   expect(screen.getByLabelText("Senha")).toBeTruthy();
   expect(profile.services).toHaveLength(0);
+});
+
+async function providerEntry() {
+  auth.value.profiles.provider = true;
+  await renderRouter(routes, { initialUrl: "/login" });
+  await screen.findByText("Que bom ter você aqui");
+  await login();
+  await testRouter.push("/client/profile");
+  await fireEvent.press(screen.getByText("Mudar para prestador"));
+  await screen.findByText("Meu espaço profissional");
+}
+async function servicesList() {
+  await testRouter.push("/provider/services");
+  await screen.findByRole("button", {
+    name: "Adicionar serviço",
+    disabled: false,
+  });
+}
+test("provider checklist derives progress and the next action from actual active records, without requiring optional bio", async () => {
+  await providerEntry();
+  expect(
+    await screen.findByRole("button", {
+      name: "Meu perfil. Concluído. Abrir etapa.",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "Meus serviços. Pendente. Abrir etapa.",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Onde atendo. Pendente. Abrir etapa." }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Adicionar serviço" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("Seu cadastro está visível para clientes"),
+  ).toBeNull();
+  completeFixture();
+  profile.bio = null;
+  await servicesList();
+  await testRouter.push("/provider");
+  expect(
+    await screen.findByText("Seu cadastro está visível para clientes"),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "Meus serviços. Concluído. Abrir etapa.",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "Onde atendo. Concluído. Abrir etapa.",
+    }),
+  ).toBeTruthy();
+  profile.services[0].category.isActive = false;
+  await servicesList();
+  await testRouter.push("/provider");
+  expect(
+    await screen.findByRole("button", { name: "Revisar meus serviços" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("Seu cadastro está visível para clientes"),
+  ).toBeNull();
+});
+test("contextual help remains available before and after first setup and closes without mandatory tutorial", async () => {
+  await providerEntry();
+  expect(screen.queryByText("Por onde começo?")).toBeNull();
+  await fireEvent.press(screen.getByRole("button", { name: "Ajuda" }));
+  expect(screen.getByText("Por onde começo?")).toBeTruthy();
+  await fireEvent.press(screen.getByText("Entendi"));
+  await servicesList();
+  await fireEvent.press(screen.getByRole("button", { name: "Ajuda" }));
+  for (const title of [
+    "Como cadastrar?",
+    "Como editar?",
+    "Como desativar?",
+    "Como reativar?",
+  ])
+    expect(screen.getByText(title)).toBeTruthy();
+  await fireEvent.press(screen.getByText("Entendi"));
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
+  await screen.findByLabelText("Título do serviço");
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Troca de tomadas",
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Ajuda" }));
+  expect(screen.getByText("Descrição opcional")).toBeTruthy();
+  await fireEvent.press(screen.getByText("Entendi"));
+  expect(screen.getByLabelText("Título do serviço")).toHaveDisplayValue(
+    "Troca de tomadas",
+  );
+  await fireEvent.press(screen.getByText("Cancelar"));
+  await fireEvent.press(await screen.findByText("Descartar alterações"));
+  completeFixture();
+  await testRouter.push("/provider");
+  await screen.findByText("Seu cadastro está visível para clientes");
+  await fireEvent.press(screen.getByRole("button", { name: "Ajuda" }));
+  expect(screen.getByText("Quando apareço na busca?")).toBeTruthy();
+  await fireEvent.press(screen.getByText("Entendi"));
+});
+test("modified forms preserve drafts on back/cancel and discard only after explicit confirmation", async () => {
+  await providerEntry();
+  await servicesList();
+  expect(screen.queryByLabelText("Título do serviço")).toBeNull();
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
+  await screen.findByLabelText("Título do serviço");
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Rascunho de instalação",
+  );
+  await fireEvent.press(screen.getByLabelText("Voltar"));
+  expect(await screen.findByText("Sair sem salvar?")).toBeTruthy();
+  await fireEvent.press(screen.getByText("Continuar editando"));
+  expect(screen.getByLabelText("Título do serviço")).toHaveDisplayValue(
+    "Rascunho de instalação",
+  );
+  await fireEvent.press(screen.getByText("Cancelar"));
+  await fireEvent.press(await screen.findByText("Descartar alterações"));
+  await screen.findByText("Seu primeiro serviço começa aqui");
+  expect(requests.filter((r) => r.method !== "GET")).toHaveLength(0);
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
+  expect(await screen.findByLabelText("Título do serviço")).toHaveDisplayValue(
+    "",
+  );
+  await fireEvent.press(screen.getByText("Cancelar"));
+  expect(
+    await screen.findByText("Seu primeiro serviço começa aqui"),
+  ).toBeTruthy();
+  expect(screen.queryByText("Sair sem salvar?")).toBeNull();
+});
+test("manage menu is explicit and canceling visibility confirmation never mutates a service", async () => {
+  completeFixture();
+  await providerEntry();
+  await servicesList();
+  expect(screen.queryByLabelText("Título do serviço")).toBeNull();
+  expect(screen.queryByText("Editar serviço")).toBeNull();
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: /^Gerenciar serviço Reparo elétrico/,
+    }),
+  );
+  expect(screen.getByRole("button", { name: "Editar serviço" })).toBeTruthy();
+  await fireEvent.press(screen.getByText("Desativar serviço"));
+  expect(
+    screen.getByText(
+      "Este serviço deixará de aparecer para clientes, mas continuará salvo. Você pode reativá-lo depois.",
+    ),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByText("Cancelar"));
+  expect(profile.services[0].isActive).toBe(true);
+  expect(requests.filter((r) => r.method === "PATCH")).toHaveLength(0);
+  await fireEvent.press(
+    screen.getByRole("button", { name: /^Gerenciar serviço Reparo elétrico/ }),
+  );
+  await fireEvent.press(screen.getByText("Desativar serviço"));
+  await fireEvent.press(screen.getByText("Confirmar desativação"));
+  await screen.findByText("Serviço desativado.");
+  expect(profile.services).toHaveLength(1);
+  expect(profile.services[0].isActive).toBe(false);
+});
+test("area management edits a saved record, supports whole-city coverage and keeps account data separate", async () => {
+  completeFixture();
+  await providerEntry();
+  await testRouter.push("/provider/profile");
+  await screen.findByText("Editar meu perfil profissional");
+  expect(screen.queryByText("pessoa@example.test")).toBeNull();
+  expect(screen.queryByLabelText("Bairro atendido")).toBeNull();
+  await fireEvent.press(screen.getByText("Onde atendo"));
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: /^Gerenciar área Araranguá\/SC/,
+    }),
+  );
+  await fireEvent.press(screen.getByText("Editar área"));
+  expect(await screen.findByLabelText("Cidade atendida")).toHaveDisplayValue(
+    "Araranguá",
+  );
+  expect(screen.getByLabelText("Bairro atendido")).toHaveDisplayValue("Centro");
+  await fireEvent.changeText(
+    screen.getByLabelText("Cidade atendida"),
+    "Criciúma",
+  );
+  await fireEvent.changeText(screen.getByLabelText("Bairro atendido"), "");
+  expect(
+    screen.getByText("Se você atende toda a cidade, deixe o bairro em branco."),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByText("Salvar área"));
+  await screen.findByText("Área de atendimento salva.");
+  expect(await screen.findByText("Toda a cidade")).toBeTruthy();
+  expect(profile.areas).toHaveLength(1);
+  expect(profile.areas[0].city).toBe("Criciúma");
+  await testRouter.push("/provider/profile");
+  await fireEvent.press(screen.getByText("Minha conta"));
+  expect(await screen.findByText("pessoa@example.test")).toBeTruthy();
+  expect(screen.queryByLabelText("Nome profissional")).toBeNull();
+});
+test("form loading/retry/errors are clear and failed saves preserve the typed draft", async () => {
+  await providerEntry();
+  await servicesList();
+  failed = true;
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
+  await screen.findByText("Não foi possível conectar ao catálogo.");
+  expect(screen.queryByLabelText("Título do serviço")).toBeNull();
+  expect(screen.getByRole("button", { name: "Ajuda" })).toBeTruthy();
+  failed = false;
+  await fireEvent.press(screen.getByText("Tentar novamente"));
+  await screen.findByLabelText("Título do serviço");
+  await fireEvent.press(screen.getByRole("radio", { name: "Eletricista" }));
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Serviço que não pode ser perdido",
+  );
+  failed = true;
+  await fireEvent.press(screen.getByText("Salvar serviço"));
+  await screen.findByText("Não foi possível conectar ao catálogo.");
+  expect(screen.getByLabelText("Título do serviço")).toHaveDisplayValue(
+    "Serviço que não pode ser perdido",
+  );
+  expect(profile.services).toHaveLength(0);
+  expect(screen.getByRole("button", { name: "Salvar serviço" })).toBeEnabled();
+});
+test("saving prevents duplicate submissions and leaving while the request is pending", async () => {
+  await providerEntry();
+  await servicesList();
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
+  await screen.findByLabelText("Título do serviço");
+  await fireEvent.press(screen.getByRole("radio", { name: "Eletricista" }));
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Instalação de tomadas",
+  );
+  let release!: () => void;
+  block = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await fireEvent.press(screen.getByText("Salvar serviço"));
+  expect(screen.getByRole("button", { name: "Salvar serviço" })).toBeDisabled();
+  await fireEvent.press(screen.getByText("Salvar serviço"));
+  await fireEvent.press(screen.getByLabelText("Voltar"));
+  await screen.findByText("Salvando alterações");
+  expect(screen.queryByText("Descartar alterações")).toBeNull();
+  await fireEvent.press(screen.getByText("Continuar aqui"));
+  await act(async () => {
+    release();
+  });
+  await screen.findByText("Serviço salvo.");
+  expect(
+    requests.filter(
+      (r) => r.method === "POST" && r.path === "provider/me/services",
+    ),
+  ).toHaveLength(1);
+  expect(profile.services).toHaveLength(1);
+});
+test("dedicated provider forms cannot be opened anonymously or from a client-only account", async () => {
+  await renderRouter(routes, { initialUrl: "/provider-setup/service" });
+  await screen.findByText("Que bom ter você aqui");
+  expect(screen.queryByLabelText("Título do serviço")).toBeNull();
+  await login();
+  await act(async () => router.push("/provider-setup/area"));
+  expect(await screen.findByText("Adicionar perfil de prestador")).toBeTruthy();
+  expect(screen.queryByLabelText("Cidade atendida")).toBeNull();
+  expect(requests.filter((r) => r.path.startsWith("provider/me"))).toHaveLength(
+    0,
+  );
+});
+
+test("the first service leads to coverage and back to the completed professional checklist", async () => {
+  await providerEntry();
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Adicionar serviço" }),
+  );
+  await screen.findByLabelText("Título do serviço");
+  await fireEvent.press(screen.getByRole("radio", { name: "Eletricista" }));
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Instalação de tomadas",
+  );
+  await fireEvent.press(screen.getByText("Salvar serviço"));
+  await fireEvent.press(await screen.findByText("Continuar: onde atendo"));
+  await screen.findByLabelText("Cidade atendida");
+  expect(screen.getByLabelText("Bairro atendido")).toHaveDisplayValue("");
+  await fireEvent.press(screen.getByText("Salvar área"));
+  await fireEvent.press(await screen.findByText("Ver meu painel"));
+  expect(
+    await screen.findByText("Seu cadastro está visível para clientes"),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "Onde atendo. Concluído. Abrir etapa.",
+    }),
+  ).toBeTruthy();
 });

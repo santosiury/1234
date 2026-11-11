@@ -11,6 +11,7 @@ import { SessionGate } from "../src/auth/SessionGate";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ProviderUxProvider } from "../src/marketplace/provider/feedback";
 import { ModeProvider } from "../src/mode";
 import { theme } from "../src/theme";
 
@@ -32,15 +33,17 @@ export default function Layout() {
       <View style={{ flex: 1, backgroundColor: theme.colors.dark }}>
         <SessionProvider>
           <ModeProvider>
-            <SessionGate fontsReady={fontsReady}>
-              <StatusBar style="dark" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: theme.colors.background },
-                }}
-              />
-            </SessionGate>
+            <ProviderUxProvider>
+              <SessionGate fontsReady={fontsReady}>
+                <StatusBar style="dark" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: theme.colors.background },
+                  }}
+                />
+              </SessionGate>
+            </ProviderUxProvider>
           </ModeProvider>
         </SessionProvider>
       </View>

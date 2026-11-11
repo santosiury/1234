@@ -1,6 +1,6 @@
 import { useSession } from "../auth/session";
 import { AuthFailure } from "../auth/api";
-import { useState, type PropsWithChildren } from "react";
+import { useState } from "react";
 import { Text, View } from "react-native";
 import { router } from "expo-router";
 import type { HealthResponse } from "@omini/shared";
@@ -15,7 +15,7 @@ import {
   Feedback,
   ui,
 } from "./ui";
-export function Profile({ children }: PropsWithChildren) {
+export function Profile({ back = false }: { back?: boolean }) {
   const { mode, setMode, catalogSource } = useMode();
   const { state, manager } = useSession();
   const [accountBusy, setAccountBusy] = useState(false);
@@ -70,11 +70,9 @@ export function Profile({ children }: PropsWithChildren) {
   return (
     <ScreenContainer>
       <Header
-        title={
-          mode === "client" ? "Seu espaço no Omini" : "Seu perfil profissional"
-        }
+        back={back}
+        title={mode === "client" ? "Seu espaço no Omini" : "Minha conta"}
       />
-      {children}
       {state.user ? (
         <View style={ui.group}>
           <View style={ui.darkCard}>

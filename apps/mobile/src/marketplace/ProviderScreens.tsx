@@ -1,33 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { router } from "expo-router";
-import type {
-  CatalogCategory,
-  ProviderAreaRecord,
-  ProviderServiceRecord,
-} from "@omini/shared";
 import {
-  Header,
   ScreenContainer,
   PrimaryButton,
-  OminiInput,
-  Badge,
+  TextButton,
   Feedback,
   ActionRow,
   EmptyState,
   ui,
 } from "../components/ui";
-import { theme } from "../theme";
-import { CatalogApi } from "./api";
-import { useOwnProvider, useProviderApi, useRemote } from "./hooks";
+import { useOwnProvider } from "./hooks";
 import { RemoteStatus } from "./components";
-const catalog = new CatalogApi();
-const messageOf = (e: unknown) =>
-  e instanceof Error ? e.message : "Não foi possível salvar. Tente novamente.";
+import { ProviderHeader, StepRow } from "./provider/FlowUI";
+import { ManagedItem } from "./provider/ManagedItem";
+import { useProviderNotice } from "./provider/feedback";
 export function ProviderGuest() {
   return (
     <ScreenContainer>
-      <Header title="Seu talento faz a diferença." />
+      <ProviderHeader title="Meu espaço profissional" topic="dashboard" />
       <EmptyState
         title="Entre para configurar seu perfil"
         description="Use sua conta para ativar o perfil de prestador e cadastrar os dados reais."
@@ -41,507 +31,284 @@ export function ProviderGuest() {
 }
 export function ProviderDashboard() {
   const result = useOwnProvider();
-  const ready =
-    result.data?.services.some((s) => s.isActive && s.category.isActive) &&
-    result.data?.areas.some((a) => a.isActive);
+  const profile = result.data;
+  const hasProfile = !!profile && profile.professionalName.trim().length >= 2;
+  const hasServices = !!profile?.services.some(
+    (s) => s.isActive && s.category.isActive,
+  );
+  const hasAreas = !!profile?.areas.some((a) => a.isActive);
+  // Same visibility requirements as the existing API; bio is optional.
+  const visible = !!profile?.isActive && hasServices && hasAreas;
+  const next = !hasProfile
+    ? {
+        title: "Editar meu perfil profissional",
+        path: "/provider-setup/profile" as const,
+      }
+    : !hasServices
+      ? profile?.services.length
+        ? {
+            title: "Revisar meus serviços",
+            path: "/provider/services" as const,
+          }
+        : {
+            title: "Adicionar serviço",
+            path: "/provider-setup/service" as const,
+          }
+      : !hasAreas
+        ? profile?.areas.length
+          ? {
+              title: "Revisar onde atendo",
+              path: "/provider-setup/areas" as const,
+            }
+          : {
+              title: "Informar onde atendo",
+              path: "/provider-setup/area" as const,
+            }
+        : null;
   return (
     <ScreenContainer>
-      <Header
-        title="Seu talento faz a diferença."
-        subtitle="Gerencie seu cadastro profissional."
+      <ProviderHeader
+        title="Meu espaço profissional"
+        subtitle="Configure seu cadastro para aparecer na busca."
+        topic="dashboard"
       />
       <RemoteStatus {...result} />
-      {result.data && (
-        <View style={ui.darkCard}>
-          <Badge dark>
-            {ready ? "Cadastro visível no catálogo" : "Complete seu cadastro"}
-          </Badge>
-          <Text style={[ui.section, ui.onDark]}>
-            {result.data.professionalName}
-          </Text>
-          <Text style={[ui.text, ui.onDarkMuted]}>
-            {ready
-              ? "Você tem serviços e áreas de atendimento ativos. O catálogo exibe as informações salvas."
-              : "Para aparecer na busca, tenha ao menos um serviço em categoria ativa e uma área de atendimento ativa."}
-          </Text>
-        </View>
+      {profile && (
+        <>
+          {visible ? (
+            <View style={ui.darkCard}>
+              <Text
+                accessibilityLiveRegion="polite"
+                style={[ui.section, ui.onDark]}
+              >
+                Seu cadastro está visível para clientes
+              </Text>
+            </View>
+          ) : (
+            next && (
+              <PrimaryButton
+                title={next.title}
+                onPress={() => router.push(next.path)}
+              />
+            )
+          )}
+          <View style={ui.group}>
+            <StepRow
+              title="Meu perfil"
+              description="Seu nome e apresentação."
+              complete={hasProfile}
+              icon="person-outline"
+              onPress={() => router.push("/provider/profile")}
+            />
+            <StepRow
+              title="Meus serviços"
+              description="Os serviços que você oferece."
+              complete={hasServices}
+              icon="construct-outline"
+              onPress={() => router.push("/provider/services")}
+            />
+            <StepRow
+              title="Onde atendo"
+              description="As cidades e os bairros atendidos."
+              complete={hasAreas}
+              icon="location-outline"
+              onPress={() => router.push("/provider-setup/areas")}
+            />
+          </View>
+        </>
       )}
-      <ActionRow
-        title="Meus serviços"
-        icon="briefcase-outline"
-        description="Cadastre, edite e desative serviços"
-        onPress={() => router.push("/provider/services")}
-      />
-      <ActionRow
-        title="Perfil profissional"
-        icon="person-outline"
-        description="Nome, descrição e áreas de atendimento"
-        onPress={() => router.push("/provider/profile")}
-      />
-      <EmptyState
-        title="Solicitações em uma próxima fase"
-        description="Contratação e recebimento de solicitações ainda não estão disponíveis."
-      />
     </ScreenContainer>
   );
 }
-export function ProviderProfileEditor() {
+export function ProviderProfileOverview() {
   const result = useOwnProvider();
-  const [name, setName] = useState("");
-  const [bio, setBio] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (result.data) {
-      setName(result.data.professionalName);
-      setBio(result.data.bio ?? "");
-    }
-  }, [result.data]);
-  async function save() {
-    if (busy) return;
-    if (
-      name.trim().length < 2 ||
-      name.trim().length > 120 ||
-      bio.length > 1000
-    ) {
-      setFailed(true);
-      setMessage(
-        "Informe nome profissional de 2 a 120 caracteres e descrição de até 1000.",
-      );
-      return;
-    }
-    setBusy(true);
-    setMessage("");
-    try {
-      await result.api.update({
-        professionalName: name.trim(),
-        bio: bio.trim() || null,
-      });
-      setFailed(false);
-      setMessage("Perfil profissional salvo.");
-      result.reload();
-    } catch (e) {
-      setFailed(true);
-      setMessage(messageOf(e));
-    } finally {
-      setBusy(false);
-    }
-  }
+  const notice = useProviderNotice("profile");
   return (
-    <>
+    <ScreenContainer>
+      <ProviderHeader
+        title="Meu perfil"
+        subtitle="As informações que os clientes veem."
+        topic="profile"
+      />
       <RemoteStatus {...result} />
+      {!!notice.message && <Feedback message={notice.message} error={false} />}
       {result.data && (
-        <View style={ui.card}>
-          <Text style={ui.section}>Seu cadastro profissional</Text>
-          <OminiInput
-            label="Nome profissional"
-            accessibilityLabel="Nome profissional"
-            value={name}
-            onChangeText={setName}
-            maxLength={120}
-            editable={!busy}
-          />
-          <OminiInput
-            label="Descrição profissional"
-            accessibilityLabel="Descrição profissional"
-            value={bio}
-            onChangeText={setBio}
-            maxLength={1000}
-            multiline
-            editable={!busy}
-          />
+        <>
+          <View style={ui.card}>
+            <Text style={ui.section}>{result.data.professionalName}</Text>
+            <Text style={ui.text}>
+              {result.data.bio
+                ? "Apresentação cadastrada."
+                : "Você pode adicionar uma apresentação, se quiser."}
+            </Text>
+          </View>
           <PrimaryButton
-            title="Salvar perfil profissional"
-            loading={busy}
-            onPress={() => void save()}
+            title="Editar meu perfil profissional"
+            onPress={() => router.push("/provider-setup/profile")}
           />
-        </View>
+        </>
       )}
-      {!!message && <Feedback message={message} error={failed} />}
-      <ProviderAreas />
-    </>
+      <ActionRow
+        title="Onde atendo"
+        description="Cidades e bairros atendidos"
+        icon="location-outline"
+        onPress={() => router.push("/provider-setup/areas")}
+      />
+      <ActionRow
+        title="Minha conta"
+        description="Nome da conta, e-mail, troca de modo e saída"
+        icon="settings-outline"
+        onPress={() => router.push("/account")}
+      />
+    </ScreenContainer>
   );
 }
 export function ProviderServices() {
-  const api = useProviderApi();
-  const result = useRemote(
-    useCallback(
-      async () => ({
-        profile: await api.me(),
-        categories: await catalog.categories(),
-      }),
-      [api],
-    ),
-  );
-  const [editing, setEditing] = useState<ProviderServiceRecord | null>(null);
-  const [categoryId, setCategoryId] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [failed, setFailed] = useState(false);
-  const clear = () => {
-    setEditing(null);
-    setCategoryId("");
-    setTitle("");
-    setDescription("");
-  };
-  async function perform(operation: () => Promise<unknown>, success: string) {
-    if (busy) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      await operation();
-      clear();
-      setFailed(false);
-      setMessage(success);
-      result.reload();
-    } catch (e) {
-      setFailed(true);
-      setMessage(messageOf(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  const save = () => {
-    if (
-      !categoryId ||
-      title.trim().length < 2 ||
-      title.trim().length > 120 ||
-      description.length > 1000
-    ) {
-      setFailed(true);
-      setMessage(
-        "Escolha uma categoria ativa e informe título de 2 a 120 caracteres. A descrição aceita até 1000.",
-      );
-      return;
-    }
-    const input = {
-      categoryId,
-      title: title.trim(),
-      description: description.trim() || null,
-    };
-    void perform(
-      () =>
-        editing
-          ? api.updateService(editing.id, input)
-          : api.createService(input),
-      "Serviço salvo.",
-    );
-  };
+  const result = useOwnProvider();
+  const notice = useProviderNotice("services");
   return (
     <ScreenContainer>
-      <Header
-        title="Seus serviços"
-        subtitle="As informações ativas compõem seu catálogo público."
+      <ProviderHeader title="Meus serviços" topic="services" />
+      <PrimaryButton
+        title="Adicionar serviço"
+        disabled={!result.data}
+        onPress={() => {
+          notice.clear();
+          router.push("/provider-setup/service");
+        }}
       />
+      {!!notice.message && <Feedback message={notice.message} error={false} />}
       <RemoteStatus {...result} />
-      {!!message && <Feedback message={message} error={failed} />}
+      {notice.message === "Serviço salvo." && result.data && (
+        <TextButton
+          title={
+            result.data.services.some(
+              (service) => service.isActive && service.category.isActive,
+            ) && !result.data.areas.some((area) => area.isActive)
+              ? "Continuar: onde atendo"
+              : "Ver meu painel"
+          }
+          onPress={() => {
+            if (
+              result.data!.services.some(
+                (service) => service.isActive && service.category.isActive,
+              ) &&
+              !result.data!.areas.some((area) => area.isActive)
+            )
+              router.push(
+                result.data!.areas.length
+                  ? "/provider-setup/areas"
+                  : "/provider-setup/area",
+              );
+            else router.push("/provider");
+          }}
+        />
+      )}
       {result.data && (
         <>
-          <View style={ui.card}>
-            <Text style={ui.section}>
-              {editing ? "Editar serviço" : "Cadastrar serviço"}
-            </Text>
-            <Text style={ui.text}>Selecione a categoria</Text>
-            <CategoryChoices
-              categories={result.data.categories}
-              selected={categoryId}
-              onSelect={setCategoryId}
-              disabled={busy}
-            />
-            {!result.data.categories.length && (
-              <Text style={ui.text}>Nenhuma categoria ativa disponível.</Text>
-            )}
-            <OminiInput
-              label="Título do serviço"
-              accessibilityLabel="Título do serviço"
-              value={title}
-              onChangeText={setTitle}
-              maxLength={120}
-              editable={!busy}
-            />
-            <OminiInput
-              label="Descrição do serviço"
-              accessibilityLabel="Descrição do serviço"
-              value={description}
-              onChangeText={setDescription}
-              maxLength={1000}
-              multiline
-              editable={!busy}
-            />
-            <PrimaryButton
-              title={
-                editing ? "Salvar alterações do serviço" : "Cadastrar serviço"
-              }
-              loading={busy}
-              onPress={save}
-            />
-            {editing && (
-              <PrimaryButton
-                secondary
-                title="Cancelar edição do serviço"
-                disabled={busy}
-                onPress={clear}
-              />
-            )}
-          </View>
-          {result.data.profile.services.length === 0 && (
+          {!result.data.services.length && (
             <EmptyState
-              title="Você ainda não cadastrou serviços"
-              description="Adicione um serviço para começar seu catálogo."
+              title="Seu primeiro serviço começa aqui"
+              description={
+                'Toque em "Adicionar serviço". Por exemplo: Instalação de tomadas.'
+              }
+              icon="construct-outline"
             />
           )}
-          {result.data.profile.services.map((service) => (
-            <View key={service.id} style={ui.card}>
-              <Badge>
-                {service.isActive ? "Serviço ativo" : "Serviço inativo"}
-              </Badge>
-              <Text style={ui.section}>{service.title}</Text>
-              <Text style={ui.small}>
-                {service.category.name}
-                {!service.category.isActive ? " · categoria indisponível" : ""}
-              </Text>
-              {!!service.description && (
-                <Text style={ui.text}>{service.description}</Text>
-              )}
-              <PrimaryButton
-                secondary
-                title={`Editar ${service.title}`}
-                disabled={busy}
-                onPress={() => {
-                  setEditing(service);
-                  setCategoryId(service.categoryId);
-                  setTitle(service.title);
-                  setDescription(service.description ?? "");
-                  setMessage("");
-                }}
-              />
-              <PrimaryButton
-                secondary
-                title={`${service.isActive ? "Desativar" : "Reativar"} ${service.title}`}
-                loading={busy}
-                onPress={() =>
-                  void perform(
-                    () =>
-                      api.updateService(service.id, {
-                        isActive: !service.isActive,
-                      }),
-                    service.isActive
-                      ? "Serviço desativado."
-                      : "Serviço reativado.",
-                  )
-                }
-              />
-            </View>
+          {result.data.services.map((service) => (
+            <ManagedItem
+              key={service.id}
+              kind="service"
+              name={service.title}
+              description={
+                service.category.name +
+                (!service.category.isActive ? " · categoria indisponível" : "")
+              }
+              active={service.isActive}
+              onEdit={() => {
+                notice.clear();
+                router.push({
+                  pathname: "/provider-setup/service",
+                  params: { id: service.id },
+                });
+              }}
+              onToggle={() =>
+                result.api.updateService(service.id, {
+                  isActive: !service.isActive,
+                })
+              }
+              onChanged={(message) => {
+                notice.success("services", message);
+                result.reload();
+              }}
+            />
           ))}
         </>
       )}
     </ScreenContainer>
   );
 }
-function CategoryChoices({
-  categories,
-  selected,
-  onSelect,
-  disabled,
-}: {
-  categories: CatalogCategory[];
-  selected: string;
-  onSelect: (id: string) => void;
-  disabled: boolean;
-}) {
-  return (
-    <View style={ui.grid} accessibilityRole="radiogroup">
-      {categories.map((category) => (
-        <Pressable
-          key={category.id}
-          accessibilityRole="radio"
-          accessibilityLabel={category.name}
-          accessibilityState={{ checked: selected === category.id, disabled }}
-          disabled={disabled}
-          onPress={() => onSelect(category.id)}
-          style={({ pressed }) => ({
-            flexBasis: "46%",
-            flexGrow: 1,
-            minWidth: 120,
-            minHeight: 48,
-            padding: theme.space.sm,
-            borderRadius: theme.radii.small,
-            borderWidth: 1,
-            borderColor: theme.colors.border,
-            backgroundColor:
-              selected === category.id
-                ? theme.colors.accent
-                : theme.colors.surface,
-            opacity: disabled ? 0.55 : pressed ? 0.7 : 1,
-          })}
-        >
-          <Text
-            style={{
-              fontFamily: theme.fonts.medium,
-              fontSize: theme.type.small,
-              lineHeight: 21,
-              color: theme.colors.ink,
-            }}
-          >
-            {category.name}
-          </Text>
-        </Pressable>
-      ))}
-    </View>
-  );
-}
-
-function ProviderAreas() {
+export function ProviderAreas() {
   const result = useOwnProvider();
-  const [editing, setEditing] = useState<ProviderAreaRecord | null>(null);
-  const [city, setCity] = useState("Araranguá");
-  const [state, setState] = useState("SC");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [failed, setFailed] = useState(false);
-  const clear = () => {
-    setEditing(null);
-    setCity("Araranguá");
-    setState("SC");
-    setNeighborhood("");
-  };
-  async function perform(operation: () => Promise<unknown>, success: string) {
-    if (busy) return;
-    setBusy(true);
-    setMessage("");
-    try {
-      await operation();
-      clear();
-      setFailed(false);
-      setMessage(success);
-      result.reload();
-    } catch (e) {
-      setFailed(true);
-      setMessage(messageOf(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  function save() {
-    if (city.trim().length < 2 || state.trim().length !== 2) {
-      setFailed(true);
-      setMessage("Informe uma cidade e a sigla do estado.");
-      return;
-    }
-    const input = {
-      city: city.trim(),
-      state: state.trim().toUpperCase(),
-      neighborhood: neighborhood.trim(),
-    };
-    void perform(
-      () =>
-        editing
-          ? result.api.updateArea(editing.id, input)
-          : result.api.createArea(input),
-      "Área de atendimento salva.",
-    );
-  }
+  const notice = useProviderNotice("areas");
   return (
-    <View style={ui.group}>
+    <ScreenContainer>
+      <ProviderHeader
+        title="Onde atendo"
+        subtitle="Informe as cidades e os bairros atendidos."
+        topic="areas"
+        back
+      />
+      <PrimaryButton
+        title="Adicionar área"
+        disabled={!result.data}
+        onPress={() => {
+          notice.clear();
+          router.push("/provider-setup/area");
+        }}
+      />
+      {!!notice.message && <Feedback message={notice.message} error={false} />}
       <RemoteStatus {...result} />
-      {!!message && <Feedback message={message} error={failed} />}
+      {notice.message === "Área de atendimento salva." && result.data && (
+        <TextButton
+          title="Ver meu painel"
+          onPress={() => router.dismissTo("/provider")}
+        />
+      )}
       {result.data && (
         <>
-          <View style={ui.card}>
-            <Text style={ui.section}>
-              {editing
-                ? "Editar área de atendimento"
-                : "Cadastrar área de atendimento"}
-            </Text>
-            <OminiInput
-              label="Cidade atendida"
-              accessibilityLabel="Cidade atendida"
-              value={city}
-              onChangeText={setCity}
-              maxLength={100}
-              editable={!busy}
-            />
-            <OminiInput
-              label="Estado atendido (UF)"
-              accessibilityLabel="Estado atendido"
-              value={state}
-              onChangeText={(v) => setState(v.toUpperCase())}
-              maxLength={2}
-              autoCapitalize="characters"
-              editable={!busy}
-            />
-            <OminiInput
-              label="Bairro atendido"
-              accessibilityLabel="Bairro atendido"
-              value={neighborhood}
-              onChangeText={setNeighborhood}
-              maxLength={100}
-              hint="Deixe em branco se atender toda a cidade."
-              editable={!busy}
-            />
-            <PrimaryButton
-              title={editing ? "Salvar alterações da área" : "Cadastrar área"}
-              loading={busy}
-              onPress={save}
-            />
-            {editing && (
-              <PrimaryButton
-                secondary
-                title="Cancelar edição da área"
-                disabled={busy}
-                onPress={clear}
-              />
-            )}
-          </View>
           {!result.data.areas.length && (
-            <Text style={ui.text}>
-              Nenhuma área cadastrada. Adicione ao menos uma para aparecer na
-              busca.
-            </Text>
+            <EmptyState
+              title="Onde você pode ajudar?"
+              description="Adicione uma cidade. Se atender toda a cidade, deixe o bairro em branco."
+              icon="location-outline"
+            />
           )}
           {result.data.areas.map((area) => (
-            <View key={area.id} style={ui.card}>
-              <Badge>{area.isActive ? "Área ativa" : "Área inativa"}</Badge>
-              <Text style={ui.section}>
-                {area.city}/{area.state}
-              </Text>
-              <Text style={ui.text}>
-                {area.neighborhood || "Toda a cidade"}
-              </Text>
-              <PrimaryButton
-                secondary
-                title={`Editar área ${area.neighborhood || area.city}`}
-                disabled={busy}
-                onPress={() => {
-                  setEditing(area);
-                  setCity(area.city);
-                  setState(area.state);
-                  setNeighborhood(area.neighborhood);
-                  setMessage("");
-                }}
-              />
-              <PrimaryButton
-                secondary
-                title={`${area.isActive ? "Desativar" : "Reativar"} área ${area.neighborhood || area.city}`}
-                loading={busy}
-                onPress={() =>
-                  void perform(
-                    () =>
-                      result.api.updateArea(area.id, {
-                        isActive: !area.isActive,
-                      }),
-                    area.isActive ? "Área desativada." : "Área reativada.",
-                  )
-                }
-              />
-            </View>
+            <ManagedItem
+              key={area.id}
+              kind="area"
+              name={`${area.city}/${area.state}`}
+              description={area.neighborhood || "Toda a cidade"}
+              active={area.isActive}
+              onEdit={() => {
+                notice.clear();
+                router.push({
+                  pathname: "/provider-setup/area",
+                  params: { id: area.id },
+                });
+              }}
+              onToggle={() =>
+                result.api.updateArea(area.id, { isActive: !area.isActive })
+              }
+              onChanged={(message) => {
+                notice.success("areas", message);
+                result.reload();
+              }}
+            />
           ))}
         </>
       )}
-    </View>
+    </ScreenContainer>
   );
 }

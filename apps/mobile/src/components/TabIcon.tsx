@@ -1,11 +1,40 @@
 import type { ComponentProps } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type ColorValue,
+} from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../theme";
 const tabBarOptions = {
   tabBarLabelPosition: "below-icon" as const,
   tabBarAllowFontScaling: true,
+  // The SDK label defaults to a single line. Keep every tab name readable at larger text sizes.
+  tabBarLabel: ({
+    color,
+    children,
+  }: {
+    color: ColorValue;
+    children: string;
+  }) => (
+    <Text
+      style={{
+        color,
+        fontFamily: theme.fonts.medium,
+        fontSize: 11,
+        lineHeight: 16,
+        textAlign: "center",
+        width: "100%",
+        minWidth: 0,
+        flexShrink: 1,
+      }}
+    >
+      {children}
+    </Text>
+  ),
   headerShown: false,
   tabBarActiveTintColor: theme.colors.ink,
   tabBarInactiveTintColor: theme.colors.muted,

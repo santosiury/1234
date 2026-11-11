@@ -19,6 +19,11 @@ const routes = [
   "provider/services",
   "provider/profile",
   "professional/[id]",
+  "provider-setup/_layout",
+  "provider-setup/service",
+  "provider-setup/profile",
+  "provider-setup/areas",
+  "provider-setup/area",
   "+not-found",
 ];
 for (const route of routes)

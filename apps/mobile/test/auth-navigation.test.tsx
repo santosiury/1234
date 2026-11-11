@@ -81,8 +81,9 @@ test("registration form validates, submits both profiles and logs into the same 
   expect(await screen.findByText("Pessoa Teste")).toBeTruthy();
   expect(screen.getByText("pessoa@example.test")).toBeTruthy();
   await fireEvent.press(screen.getByText("Mudar para prestador"));
-  expect(await screen.findByText("Seu talento faz a diferença.")).toBeTruthy();
+  expect(await screen.findByText("Meu espaço profissional")).toBeTruthy();
   await testRouter.push("/provider/profile");
+  await fireEvent.press(screen.getByText("Minha conta"));
   await fireEvent.press(screen.getByText("Sair da conta"));
   expect(await screen.findByText("Entrar na minha conta")).toBeTruthy();
   expect(api.logoutCalls).toHaveLength(1);
@@ -106,7 +107,7 @@ test("client-only account cannot enter provider until its profile is enrolled", 
   await fireEvent.press(screen.getByText("Adicionar perfil de prestador"));
   expect(await screen.findByText("Mudar para prestador")).toBeTruthy();
   await fireEvent.press(screen.getByText("Mudar para prestador"));
-  expect(await screen.findByText("Seu talento faz a diferença.")).toBeTruthy();
+  expect(await screen.findByText("Meu espaço profissional")).toBeTruthy();
 });
 test("expired session returns to login with a clear message", async () => {
   await renderRouter(routes, { initialUrl: "/login" });
