@@ -2,6 +2,8 @@
 
 Branch `feature/fase-2-3-ux-prestador`, continuação de `8dba1bd`. Esta correção substitui as abas do prestador por Stacks do Expo Router SDK 58. A experiência cliente continua usando suas abas existentes. Nenhuma dependência, endpoint, regra de publicação, autenticação, configuração de SecureStore, Prisma ou banco foi alterada. Nenhuma migration foi executada.
 
+A [entrega posterior de navegação inferior](navegacao-inferior-avaliacoes-visuais.md) acrescenta uma barra de UI junto à Stack, conta em `/provider/account` e avaliações vazias. Ela mantém a correção descrita aqui; os resultados ao final deste documento registram o commit `c7f94a4`.
+
 ## Hierarquia atual
 
 O painel é a raiz profissional. Cada seção tem uma Stack com sua página inicial e seu formulário:
@@ -11,6 +13,7 @@ Stack raiz do aplicativo (existente)
 ├── /account                         Minha conta
 └── /provider                        Stack; anchor: index
     ├── index                        Meu espaço profissional
+    ├── account                      Minha conta no espaço profissional
     ├── services/                    Stack; anchor: index
     │   ├── index                    Meus serviços
     │   └── edit                     Adicionar/editar serviço (?id=...)
@@ -35,11 +38,11 @@ Fluxos esperados tanto pelos botões quanto pelas ações de retorno da Stack:
 
 A seção é a origem explícita de salvar/cancelar no formulário. Voltar nas listas usa o painel como destino. O caminho de continuação do primeiro serviço para atendimento e o acesso a atendimento pelo perfil **substituem a seção atual**, preservando o painel abaixo dela; por isso o retorno de Onde atendo não cai em outra seção.
 
-O acesso a Minha conta fica no painel e no perfil. Solicitações recebidas continua acessível pelo painel, preservando apenas a tela já existente e sem implementar solicitações reais. A demonstração mantém seus serviços, perfil, disponibilidade e solicitações, com retorno explícito nas páginas internas.
+O acesso a Minha conta fica na barra inferior profissional, sem duplicação no conteúdo. Solicitações recebidas continua acessível pelo painel, preservando apenas a tela já existente e sem implementar solicitações reais. A demonstração mantém seus serviços, perfil, disponibilidade e solicitações, com retorno explícito nas páginas internas.
 
 ## Acesso direto e modos
 
-Para contas cujo perfil prestador está habilitado na sessão, **Meu espaço profissional** fica disponível em Minha conta, inclusive quando o modo atual já é prestador. A home autenticada também oferece esse CTA, com Minha conta como ação secundária.
+Para contas cujo perfil prestador está habilitado na sessão, **Meu espaço profissional** fica disponível na conta global (`/account`), inclusive quando o modo atual já é prestador. Na nova conta profissional (`/provider/account`), a ação Painel da barra oferece o retorno direto sem duplicar esse botão. A home autenticada também oferece esse CTA, com Minha conta como ação secundária.
 
 Somente tocar nesse botão seleciona explicitamente o modo prestador e o catálogo real, e volta ao índice profissional existente ou abre esse índice. Não é preciso alternar para cliente e voltar. Navegar para Minha conta, restaurar uma sessão ou abrir uma URL não ativa um modo por conta própria. O guard existente continua respeitando a seleção de modo: uma conta em modo cliente deve usar o acesso explícito para entrar na área profissional. Usuários sem perfil prestador continuam usando o cadastro de perfil já existente.
 
@@ -106,12 +109,12 @@ No iPhone, mantenha `EXPO_PUBLIC_API_URL` com o IP do Windows na mesma rede Wi-F
 2. Repita com Meu perfil e Onde atendo. Abra Onde atendo pelo perfil e confirme que o próximo retorno também chega ao painel.
 3. Adicione/edite um serviço, salve e confira a lista atualizada. O próximo gesto deve voltar ao painel. Repita com perfil e área, sem perder os dados.
 4. Pelo fluxo do primeiro serviço, use **Continuar: onde atendo**, salve a área e volte por gesto. O destino deve ser o painel.
-5. Abra Minha conta a partir do painel e do perfil. Toque **Meu espaço profissional** sem mudar para cliente; confira o painel. Repita pela home e depois de alternar para cliente, voltando pelo CTA explícito.
+5. Abra Minha conta a partir do painel e do perfil. Use **Painel** na barra sem mudar para cliente; confira o painel. Na conta global, o acesso continua chamado **Meu espaço profissional**. Repita pela home e depois de alternar para cliente, voltando pelo CTA explícito.
 6. Modifique um formulário. Tente sair pelo botão e pelo gesto nativo: **Continuar editando** deve conservar o rascunho; **Descartar alterações** deve respeitar o destino confirmado. Durante um envio, tente voltar e confira o bloqueio. Não encerre o processo para testar rascunhos: sua persistência continua somente em memória.
 7. Com o modo prestador selecionado, reabra links das listas e dos formulários, inclusive após restaurar a sessão. Confira formulário → seção → painel. Links não devem ativar outro modo silenciosamente.
 8. Confira Ajuda, teclado, safe areas, tamanho de fonte ampliado, VoiceOver e alvos de toque. Repita os testes de desativação/reativação com registros de teste e confira o catálogo real com outra conta cliente. A demonstração deve permanecer separada.
 
-## Resultados desta correção
+## Resultados desta correção (`c7f94a4`)
 
 | Verificação                 | Resultado                                                                                     |
 | --------------------------- | --------------------------------------------------------------------------------------------- |

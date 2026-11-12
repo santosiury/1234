@@ -58,19 +58,9 @@ export default function Dashboard() {
           icon="briefcase-outline"
           onPress={() => router.push("/provider/services")}
         />
-        <ActionRow
-          title="Perfil profissional"
-          description="Sua conta e os seus perfis"
-          icon="person-outline"
-          onPress={() => router.push("/provider/profile")}
-        />
       </View>
       <View style={ui.group}>
-        <SectionHeading
-          title="Solicitações"
-          action="Ver área"
-          onPress={() => router.push("/provider/requests")}
-        />
+        <SectionHeading title="Solicitações" />
         <EmptyState
           title="Tudo começa com uma conexão"
           description="As solicitações recebidas aparecerão aqui em uma fase futura. Nenhum atendimento está sendo recebido."

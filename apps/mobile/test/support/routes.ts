@@ -8,6 +8,7 @@ import Requests from "../../app/client/requests";
 import ClientProfile from "../../app/client/profile";
 import * as ProviderLayout from "../../app/provider/_layout";
 import Provider from "../../app/provider/index";
+import ProfessionalAccount from "../../app/provider/account";
 import Received from "../../app/provider/requests";
 import Services from "../../app/provider/services/index";
 import ProviderProfile from "../../app/provider/profile/index";
@@ -40,6 +41,7 @@ export const routes = {
   "provider/_layout": ProviderLayout,
   "provider/index": Provider,
   "provider/requests": Received,
+  "provider/account": ProfessionalAccount,
   "provider/services/_layout": ServicesLayout,
   "provider/services/index": Services,
   "provider/services/edit": CanonicalServiceForm,

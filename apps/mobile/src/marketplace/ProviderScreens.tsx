@@ -1,3 +1,4 @@
+import { ReviewsSection } from "../components/ReviewsSection";
 import { Text, View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -117,11 +118,6 @@ export function ProviderDashboard() {
           </View>
         </>
       )}
-      <TextButton title="Minha conta" onPress={() => router.push("/account")} />
-      <TextButton
-        title="Solicitações recebidas"
-        onPress={() => router.push("/provider/requests", { withAnchor: true })}
-      />
     </ScreenContainer>
   );
 }
@@ -155,6 +151,7 @@ export function ProviderProfileOverview() {
               router.push("/provider/profile/edit", { withAnchor: true })
             }
           />
+          <ReviewsSection />
         </>
       )}
       <ActionRow
@@ -162,12 +159,6 @@ export function ProviderProfileOverview() {
         description="Cidades e bairros atendidos"
         icon="location-outline"
         onPress={() => router.replace("/provider/areas", { withAnchor: true })}
-      />
-      <ActionRow
-        title="Minha conta"
-        description="Nome da conta, e-mail, troca de modo e saída"
-        icon="settings-outline"
-        onPress={() => router.push("/account")}
       />
     </ScreenContainer>
   );
@@ -193,32 +184,24 @@ export function ProviderServices() {
       />
       {!!notice.message && <Feedback message={notice.message} error={false} />}
       <RemoteStatus {...result} />
-      {notice.message === "Serviço salvo." && result.data && (
-        <TextButton
-          title={
-            result.data.services.some(
-              (service) => service.isActive && service.category.isActive,
-            ) && !result.data.areas.some((area) => area.isActive)
-              ? "Continuar: onde atendo"
-              : "Ver meu painel"
-          }
-          onPress={() => {
-            if (
-              result.data!.services.some(
-                (service) => service.isActive && service.category.isActive,
-              ) &&
-              !result.data!.areas.some((area) => area.isActive)
-            )
+      {notice.message === "Serviço salvo." &&
+        result.data &&
+        result.data.services.some(
+          (service) => service.isActive && service.category.isActive,
+        ) &&
+        !result.data.areas.some((area) => area.isActive) && (
+          <TextButton
+            title="Continuar: onde atendo"
+            onPress={() =>
               router.replace(
                 result.data!.areas.length
                   ? "/provider/areas"
                   : "/provider/areas/edit",
                 { withAnchor: true },
-              );
-            else router.dismissTo("/provider");
-          }}
-        />
-      )}
+              )
+            }
+          />
+        )}
       {result.data && (
         <>
           {!result.data.services.length && (
@@ -285,12 +268,6 @@ export function ProviderAreas() {
       />
       {!!notice.message && <Feedback message={notice.message} error={false} />}
       <RemoteStatus {...result} />
-      {notice.message === "Área de atendimento salva." && result.data && (
-        <TextButton
-          title="Ver meu painel"
-          onPress={() => router.dismissTo("/provider")}
-        />
-      )}
       {result.data && (
         <>
           {!result.data.areas.length && (

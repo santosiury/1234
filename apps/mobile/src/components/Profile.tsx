@@ -16,7 +16,13 @@ import {
   Feedback,
   ui,
 } from "./ui";
-export function Profile({ back = false }: { back?: boolean }) {
+export function Profile({
+  back = false,
+  professional = false,
+}: {
+  back?: boolean;
+  professional?: boolean;
+}) {
   const { mode, setMode, catalogSource } = useMode();
   const openProfessional = useProfessionalEntry();
   const { state, manager } = useSession();
@@ -73,6 +79,7 @@ export function Profile({ back = false }: { back?: boolean }) {
     <ScreenContainer>
       <Header
         back={back}
+        onBack={professional ? () => router.dismissTo("/provider") : undefined}
         title={
           mode === "client" && !back ? "Seu espaço no Omini" : "Minha conta"
         }
@@ -102,13 +109,18 @@ export function Profile({ back = false }: { back?: boolean }) {
             </Text>
             <Text style={[ui.text, ui.onDarkMuted]}>{state.user.email}</Text>
           </View>
-          {state.user.profiles.provider && (
-            <PrimaryButton
-              title="Meu espaço profissional"
-              disabled={accountBusy}
-              onPress={openProfessional}
-            />
-          )}
+          {state.user.profiles.provider &&
+            (!professional || catalogSource === "demo") && (
+              <PrimaryButton
+                title={
+                  professional
+                    ? "Abrir meu cadastro real"
+                    : "Meu espaço profissional"
+                }
+                disabled={accountBusy}
+                onPress={openProfessional}
+              />
+            )}
           <View style={ui.card}>
             <Text style={ui.section}>Uma conta, duas experiências</Text>
             <Text style={ui.text}>

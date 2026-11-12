@@ -10,6 +10,8 @@ Refinamento da experiência em `feature/fase-2-3-ux-prestador`, baseado em `ddf3
 
 Correção de navegação: o prestador agora usa uma Stack com painel, seções e formulários, além de acesso direto pela conta e home. Veja [hierarquia, testes e roteiro no iPhone](docs/correcao-navegacao-prestador.md).
 
+Barra inferior profissional e avaliações visuais: [organização, arquivos e teste no iPhone](docs/navegacao-inferior-avaliacoes-visuais.md). A Stack e os três cards aprovados são preservados; avaliações continuam sem dados ou backend. A [proposta bidirecional futura](docs/avaliacoes-bidirecionais.md) depende da Fase 2.4 concluída.
+
 ## Estrutura
 
 ```text
@@ -35,7 +37,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [correção de navegação — atualização e roteiro no iPhone](docs/correcao-navegacao-prestador.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [barra profissional — atualização e roteiro no iPhone](docs/navegacao-inferior-avaliacoes-visuais.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 

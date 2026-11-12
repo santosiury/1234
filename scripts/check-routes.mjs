@@ -16,6 +16,7 @@ const routes = [
   "provider/_layout",
   "provider/index",
   "provider/requests",
+  "provider/account",
   "provider/services/_layout",
   "provider/services/index",
   "provider/services/edit",

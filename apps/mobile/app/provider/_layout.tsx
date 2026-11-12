@@ -1,3 +1,5 @@
+import { View } from "react-native";
+import { ProviderNavigation } from "../../src/marketplace/provider/ProviderNavigation";
 import { useSession } from "../../src/auth/session";
 import { Redirect, Stack } from "expo-router";
 import { useMode } from "../../src/mode";
@@ -25,25 +27,29 @@ export default function ProviderLayout() {
       />
     );
   return (
-    <Stack
-      key={state.user?.id ?? "guest"}
-      screenOptions={{
-        headerShown: false,
-        gestureEnabled: true,
-        contentStyle: { backgroundColor: theme.colors.background },
-      }}
-    >
-      <Stack.Screen
-        name="index"
-        options={{ title: "Meu espaço profissional" }}
-      />
-      <Stack.Screen name="services" options={{ title: "Meus serviços" }} />
-      <Stack.Screen name="profile" options={{ title: "Meu perfil" }} />
-      <Stack.Screen name="areas" options={{ title: "Onde atendo" }} />
-      <Stack.Screen
-        name="requests"
-        options={{ title: "Solicitações recebidas" }}
-      />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack
+        key={state.user?.id ?? "guest"}
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: true,
+          contentStyle: { backgroundColor: theme.colors.background },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{ title: "Meu espaço profissional" }}
+        />
+        <Stack.Screen name="account" options={{ title: "Minha conta" }} />
+        <Stack.Screen name="services" options={{ title: "Meus serviços" }} />
+        <Stack.Screen name="profile" options={{ title: "Meu perfil" }} />
+        <Stack.Screen name="areas" options={{ title: "Onde atendo" }} />
+        <Stack.Screen
+          name="requests"
+          options={{ title: "Solicitações recebidas" }}
+        />
+      </Stack>
+      <ProviderNavigation />
+    </View>
   );
 }

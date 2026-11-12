@@ -7,6 +7,7 @@ import {
 } from "expo-router/testing-library";
 import { router } from "expo-router";
 import * as SecureStore from "expo-secure-store";
+import * as ReactNative from "react-native";
 import type {
   CatalogCategory,
   CreateAreaInput,
@@ -761,7 +762,8 @@ test("the first service leads to coverage and back to the completed professional
   await screen.findByLabelText("Cidade atendida");
   expect(screen.getByLabelText("Bairro atendido")).toHaveDisplayValue("");
   await fireEvent.press(screen.getByText("Salvar área"));
-  await fireEvent.press(await screen.findByText("Ver meu painel"));
+  expect(screen.queryByRole("button", { name: "Ver meu painel" })).toBeNull();
+  await fireEvent.press(screen.getByRole("button", { name: "Painel" }));
   expect(
     await screen.findByText("Seu cadastro está visível para clientes"),
   ).toBeTruthy();
@@ -882,9 +884,7 @@ test("account reopens the professional dashboard in the same mode without a clie
   expect(
     screen.queryByRole("button", { name: "Mudar para prestador" }),
   ).toBeNull();
-  await fireEvent.press(
-    screen.getByRole("button", { name: "Meu espaço profissional" }),
-  );
+  await fireEvent.press(screen.getByRole("button", { name: "Painel" }));
   await screen.findByRole("header", { name: "Meu espaço profissional" });
   expect(screen).toHavePathname("/provider");
   await fireEvent.press(
@@ -941,9 +941,9 @@ test("explicit professional entry from demo account restores the real catalog wi
   await fireEvent.press(screen.getByText("Explorar Omini"));
   await fireEvent.press(screen.getByText("Conhecer o modo prestador"));
   await screen.findByText("Seu talento faz a diferença.");
-  await fireEvent.press(screen.getByText("Perfil profissional"));
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
   await fireEvent.press(
-    await screen.findByRole("button", { name: "Meu espaço profissional" }),
+    await screen.findByRole("button", { name: "Abrir meu cadastro real" }),
   );
   expect(
     await screen.findByRole("header", { name: "Meu espaço profissional" }),
@@ -960,6 +960,7 @@ test("explicit professional entry from demo account restores the real catalog wi
 });
 
 const directProviderRoutes = [
+  { path: "/provider/account", section: "Minha conta", form: false },
   { path: "/provider/services", section: "Meus serviços", form: false },
   { path: "/provider/profile", section: "Meu perfil", form: false },
   { path: "/provider/areas", section: "Onde atendo", form: false },
@@ -1085,4 +1086,170 @@ test("opening coverage from professional profile keeps native back pointed at th
   await nativeBack();
   await screen.findByRole("header", { name: "Meu espaço profissional" });
   expect(screen).toHavePathname("/provider");
+});
+
+test("professional bottom navigation is unique, labelled and keeps the three approved dashboard steps", async () => {
+  completeFixture();
+  await providerEntry();
+  expect(
+    screen.getAllByLabelText("Navegação do espaço profissional"),
+  ).toHaveLength(1);
+  for (const name of ["Painel", "Solicitações", "Minha conta"])
+    expect(screen.getAllByRole("button", { name })).toHaveLength(1);
+  expect(
+    screen.getByRole("button", { name: "Painel", selected: true }),
+  ).toBeTruthy();
+  for (const step of ["Meu perfil", "Meus serviços", "Onde atendo"])
+    expect(
+      await screen.findByRole("button", {
+        name: `${step}. Concluído. Abrir etapa.`,
+      }),
+    ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Solicitações recebidas" }),
+  ).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("button", {
+      name: "Meus serviços. Concluído. Abrir etapa.",
+    }),
+  );
+  await screen.findByRole("header", { name: "Meus serviços" });
+  expect(
+    screen.getByRole("button", { name: "Painel", selected: true }),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByRole("button", { name: "Painel" }));
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
+  expect(screen).toHavePathname("/provider");
+});
+
+test.each([
+  {
+    first: "Minha conta",
+    second: "Solicitações",
+    path: "/provider/requests",
+    heading: "Solicitações recebidas",
+  },
+  {
+    first: "Solicitações",
+    second: "Minha conta",
+    path: "/provider/account",
+    heading: "Minha conta",
+  },
+])(
+  "bottom navigation $first to $second preserves dashboard as native back destination",
+  async ({ first, second, path, heading }) => {
+    completeFixture();
+    const saved = clone(profile);
+    await providerEntry();
+    await fireEvent.press(screen.getByRole("button", { name: first }));
+    await screen.findByRole("button", { name: first, selected: true });
+    await fireEvent.press(screen.getByRole("button", { name: second }));
+    await screen.findByRole("header", { name: heading });
+    expect(screen).toHavePathname(path);
+    expect(
+      screen.getByRole("button", { name: second, selected: true }),
+    ).toBeTruthy();
+    // Re-selecting the current item must not push another screen.
+    await fireEvent.press(screen.getByRole("button", { name: second }));
+    await nativeBack();
+    await screen.findByRole("header", { name: "Meu espaço profissional" });
+    expect(screen).toHavePathname("/provider");
+    expect(profile).toEqual(saved);
+    expect(requests.filter((r) => r.method !== "GET")).toHaveLength(0);
+  },
+);
+
+test("all professional forms hide bottom navigation and restore it when canceled without losing stack hierarchy", async () => {
+  completeFixture();
+  await providerEntry();
+  for (const item of [
+    {
+      section: "Meus serviços",
+      open: "Adicionar serviço",
+      label: "Título do serviço",
+    },
+    {
+      section: "Meu perfil",
+      open: "Editar meu perfil profissional",
+      label: "Nome profissional",
+    },
+    {
+      section: "Onde atendo",
+      open: "Adicionar área",
+      label: "Cidade atendida",
+    },
+  ]) {
+    await fireEvent.press(
+      await screen.findByRole("button", {
+        name: `${item.section}. Concluído. Abrir etapa.`,
+      }),
+    );
+    await fireEvent.press(
+      await screen.findByRole("button", { name: item.open }),
+    );
+    await screen.findByLabelText(item.label);
+    expect(
+      screen.queryByLabelText("Navegação do espaço profissional"),
+    ).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Cancelar" }));
+    await screen.findByRole("header", { name: item.section });
+    expect(
+      screen.getByLabelText("Navegação do espaço profissional"),
+    ).toBeTruthy();
+    await nativeBack();
+    await screen.findByRole("header", { name: "Meu espaço profissional" });
+  }
+});
+
+test("enlarged text on a narrow screen keeps every bottom destination available and functional", async () => {
+  jest
+    .spyOn(ReactNative, "useWindowDimensions")
+    .mockReturnValue({ width: 320, height: 568, scale: 2, fontScale: 2 });
+  await providerEntry();
+  for (const name of ["Painel", "Solicitações", "Minha conta"])
+    expect(screen.getByRole("button", { name })).toBeTruthy();
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
+  await screen.findByRole("header", { name: "Minha conta" });
+  expect(
+    screen.queryByRole("button", { name: "Meu espaço profissional" }),
+  ).toBeNull();
+  await fireEvent.press(screen.getByRole("button", { name: "Painel" }));
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
+  expect(screen).toHavePathname("/provider");
+});
+
+test("professional profile and public real catalog show empty reviews without invented scores or review requests", async () => {
+  completeFixture();
+  await providerEntry();
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: "Meu perfil. Concluído. Abrir etapa.",
+    }),
+  );
+  expect(
+    await screen.findByRole("header", { name: "Avaliações" }),
+  ).toBeTruthy();
+  expect(screen.getByText("Ainda não há avaliações.")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Depois de realizar serviços pelo Omini, seus clientes poderão avaliar seu atendimento.",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/de 5 ·/)).toBeNull();
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Mudar para cliente" }),
+  );
+  await screen.findByText("De que você precisa hoje?");
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Ver perfil de João Elétrica" }),
+  );
+  expect(
+    await screen.findByRole("header", { name: "Avaliações" }),
+  ).toBeTruthy();
+  expect(screen.getByText("Ainda não há avaliações.")).toBeTruthy();
+  expect(screen.queryByText(/de 5 ·/)).toBeNull();
+  expect(requests.some((request) => /review|avaliac/i.test(request.path))).toBe(
+    false,
+  );
 });
