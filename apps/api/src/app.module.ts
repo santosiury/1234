@@ -1,3 +1,4 @@
+import { RequestsModule } from "./requests/requests.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { AuthModule } from "./auth/auth.module";
 import { Module } from "@nestjs/common";
@@ -16,6 +17,7 @@ import { validateEnvironment } from "./config";
     PersistenceModule,
     AuthModule,
     MarketplaceModule,
+    RequestsModule,
   ],
 })
 export class AppModule {}
