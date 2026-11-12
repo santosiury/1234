@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import {
   ScreenContainer,
   Header,
@@ -6,7 +7,11 @@ import {
 export default function Requests() {
   return (
     <ScreenContainer>
-      <Header title="Solicitações recebidas" />
+      <Header
+        title="Solicitações recebidas"
+        back
+        onBack={() => router.dismissTo("/provider")}
+      />
       <FutureFeature title="Nenhuma solicitação nesta demonstração" />
     </ScreenContainer>
   );

@@ -4,16 +4,18 @@ Branch: `feature/fase-2-3-ux-prestador`, baseada em `ddf36970abbd9e09059565c51cc
 
 Esta entrega reorganiza o mobile. Reutiliza os endpoints e contratos da Fase 2.3, sem novas dependências, migrations, seed, permissões SQL ou mudanças de autenticação. O backend, Prisma, JWT, SecureStore e as regras de publicação permanecem iguais à base validada pelo responsável no SQL Server e no iPhone. Nenhuma migration ou conexão real ao banco foi executada nesta revisão.
 
+A [correção posterior da navegação](correcao-navegacao-prestador.md), baseada em `8dba1bd`, organiza o prestador em Stacks e acrescenta acessos diretos pela conta e home. Consulte esse documento para os testes e o roteiro atuais. Os resultados de verificação no final deste guia registram a entrega visual original.
+
 ## Organização e primeiro cadastro
 
-| Tela                    | Acesso e função                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- |
-| Meu espaço profissional | Aba Painel: três etapas, estado real e uma próxima ação em destaque.                                    |
-| Meu perfil              | Aba Perfil: resumo profissional, **Editar meu perfil profissional**, **Onde atendo** e **Minha conta**. |
-| Meus serviços           | Aba Serviços: **Adicionar serviço**, lista compacta e **Gerenciar** em cada item.                       |
-| Onde atendo             | Pelo painel ou perfil: lista das cidades/bairros e **Adicionar área**.                                  |
-| Formulários             | Rotas `/provider-setup/profile`, `/provider-setup/service` e `/provider-setup/area`, fora das abas.     |
-| Minha conta             | Rota `/account`: dados da conta, modos disponíveis, saída e teste de conexão.                           |
+| Tela                    | Acesso e função                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Meu espaço profissional | Raiz da Stack profissional: três etapas, estado real e uma próxima ação em destaque.                               |
+| Meu perfil              | Seção Perfil: resumo profissional, **Editar meu perfil profissional**, **Onde atendo** e **Minha conta**.          |
+| Meus serviços           | Seção Serviços: **Adicionar serviço**, lista compacta e **Gerenciar** em cada item.                                |
+| Onde atendo             | Pelo painel ou perfil: lista das cidades/bairros e **Adicionar área**.                                             |
+| Formulários             | Rotas `/provider/profile/edit`, `/provider/services/edit` e `/provider/areas/edit`, dentro das respectivas Stacks. |
+| Minha conta             | Rota `/account`: dados da conta, modos disponíveis, saída e teste de conexão.                                      |
 
 1. Entre na conta e selecione o modo prestador. Se necessário, adicione esse perfil pela área da conta, usando o fluxo já existente.
 2. Confira **Meu perfil**. O nome profissional inicialmente aproveita o nome da conta. A apresentação é opcional: não há uma nova exigência de preenchê-la para publicar.
@@ -35,7 +37,7 @@ O rascunho fica somente em memória. Encerrar o processo do aplicativo ou recarr
 
 ## Interface e acessibilidade
 
-Mantidos preto/branco/verde-lima, Inter e assets existentes. Botões e ações têm alvos mínimos de 44 pontos, textos sem limite de linhas e altura flexível. Cabeçalhos permitem quebra do conjunto marca/ajuda; categorias permitem múltiplas linhas. Os rótulos das abas usam um componente sem a truncagem de uma linha do rótulo padrão do SDK, preservando ampliação de fonte e a altura adaptativa da barra.
+Mantidos preto/branco/verde-lima, Inter e assets existentes. Botões e ações têm alvos mínimos de 44 pontos, textos sem limite de linhas e altura flexível. Cabeçalhos permitem quebra do conjunto marca/ajuda; categorias permitem múltiplas linhas. Na experiência cliente, os rótulos das abas usam um componente sem a truncagem de uma linha do rótulo padrão do SDK, preservando ampliação de fonte e a altura adaptativa da barra.
 
 As telas reutilizam safe areas, rolagem e ajuste de teclado do `ScreenContainer`. Status incluem texto e símbolo; campos têm rótulos acessíveis e instruções. Confirmações usam modal de tela inteira com safe area e rolagem para fontes ampliadas. Verifique foco, leitura, teclado e gestos no aparelho conforme o roteiro abaixo.
 
@@ -46,8 +48,8 @@ As telas reutilizam safe areas, rolagem e ajuste de teclado do `ScreenContainer`
 - `apps/mobile/src/marketplace/provider/FlowUI.tsx`: etapas, ajuda, modal e proteção ao sair.
 - `apps/mobile/src/marketplace/provider/ManagedItem.tsx`: item compacto, menu e confirmação.
 - `apps/mobile/src/marketplace/provider/feedback.tsx`: avisos transitórios por usuário.
-- `apps/mobile/app/provider-setup/*`: stack, formulários e lista de áreas.
-- `apps/mobile/app/_layout.tsx`, `app/provider/profile.tsx`, `app/account.tsx`: integração das novas telas e avisos.
+- `apps/mobile/app/provider/{services,profile,areas}/*`: Stacks, formulários e listas. `app/provider-setup/*` mantém os endereços antigos como aliases.
+- `apps/mobile/app/_layout.tsx`, `app/provider/profile/index.tsx`, `app/account.tsx`: integração das novas telas e avisos.
 - `apps/mobile/src/components/{Profile,ui,TabIcon}.tsx`: separação da conta, cabeçalho, ação desabilitada e rótulos de abas.
 - `apps/mobile/test/{marketplace-navigation,auth-navigation}.test.tsx`, `test/support/routes.ts`: navegação e regressões.
 - `scripts/check-routes.mjs`, `.github/workflows/quality.yml`, `README.md`: novas rotas, branch no CI e documentação.
@@ -103,7 +105,7 @@ Abra o QR pela Câmera no Expo Go compatível com SDK 58. Use a mesma rede Wi-Fi
 
 Use registros de teste ao confirmar alterações de visibilidade: essas operações continuam reais no seu banco. Esta revisão não executou essas operações no SQL Server de produção.
 
-## Verificação desta entrega
+## Verificação da entrega visual original (`bed62c7` / `8dba1bd`)
 
 Validação em 11/11/2026, Node 24.22.1 / npm 11.9.0:
 

@@ -16,8 +16,15 @@ const routes = [
   "provider/_layout",
   "provider/index",
   "provider/requests",
-  "provider/services",
-  "provider/profile",
+  "provider/services/_layout",
+  "provider/services/index",
+  "provider/services/edit",
+  "provider/profile/_layout",
+  "provider/profile/index",
+  "provider/profile/edit",
+  "provider/areas/_layout",
+  "provider/areas/index",
+  "provider/areas/edit",
   "professional/[id]",
   "provider-setup/_layout",
   "provider-setup/service",
@@ -31,14 +38,23 @@ for (const route of routes)
     existsSync(new URL(`${route}.tsx`, root)),
     `Missing route: ${route}`,
   );
-for (const mode of ["client", "provider"]) {
-  const source = readFileSync(new URL(`${mode}/_layout.tsx`, root), "utf8");
-  assert.ok(source.includes("Redirect"), "Mode guard is missing");
-  for (const name of mode === "client"
-    ? ["index", "search", "categories", "requests", "profile"]
-    : ["index", "requests", "services", "profile"])
-    assert.ok(source.includes(`name="${name}"`), `Missing tab ${mode}/${name}`);
+const client = readFileSync(new URL("client/_layout.tsx", root), "utf8");
+assert.ok(client.includes("Redirect"), "Client mode guard is missing");
+for (const name of ["index", "search", "categories", "requests", "profile"])
+  assert.ok(client.includes(`name="${name}"`), `Missing client tab ${name}`);
+for (const route of [
+  "provider",
+  "provider/services",
+  "provider/profile",
+  "provider/areas",
+]) {
+  const source = readFileSync(new URL(`${route}/_layout.tsx`, root), "utf8");
+  assert.ok(source.includes("Stack"), `Missing professional Stack: ${route}`);
+  assert.ok(!source.includes("Tabs"), `Unexpected professional tabs: ${route}`);
+  assert.match(source, /anchor: "index"/, `Missing return anchor: ${route}`);
 }
+const provider = readFileSync(new URL("provider/_layout.tsx", root), "utf8");
+assert.ok(provider.includes("Redirect"), "Provider mode guard is missing");
 console.log(
-  `Verified ${routes.length} route files and both tab layouts. Runtime navigation is covered by mobile tests.`,
+  `Verified ${routes.length} route files, client tabs and anchored provider stacks. Runtime navigation is covered by mobile tests.`,
 );

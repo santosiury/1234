@@ -1,3 +1,4 @@
+import { useProfessionalEntry } from "../marketplace/provider/navigation";
 import { useSession } from "../auth/session";
 import { AuthFailure } from "../auth/api";
 import { useState } from "react";
@@ -17,6 +18,7 @@ import {
 } from "./ui";
 export function Profile({ back = false }: { back?: boolean }) {
   const { mode, setMode, catalogSource } = useMode();
+  const openProfessional = useProfessionalEntry();
   const { state, manager } = useSession();
   const [accountBusy, setAccountBusy] = useState(false);
   const [accountMessage, setAccountMessage] = useState("");
@@ -71,7 +73,9 @@ export function Profile({ back = false }: { back?: boolean }) {
     <ScreenContainer>
       <Header
         back={back}
-        title={mode === "client" ? "Seu espaço no Omini" : "Minha conta"}
+        title={
+          mode === "client" && !back ? "Seu espaço no Omini" : "Minha conta"
+        }
       />
       {state.user ? (
         <View style={ui.group}>
@@ -98,6 +102,13 @@ export function Profile({ back = false }: { back?: boolean }) {
             </Text>
             <Text style={[ui.text, ui.onDarkMuted]}>{state.user.email}</Text>
           </View>
+          {state.user.profiles.provider && (
+            <PrimaryButton
+              title="Meu espaço profissional"
+              disabled={accountBusy}
+              onPress={openProfessional}
+            />
+          )}
           <View style={ui.card}>
             <Text style={ui.section}>Uma conta, duas experiências</Text>
             <Text style={ui.text}>

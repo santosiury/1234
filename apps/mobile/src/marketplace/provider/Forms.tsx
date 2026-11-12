@@ -328,7 +328,7 @@ function AreaForm({
       state !== initial.state ||
       neighborhood !== initial.neighborhood,
     busy,
-    "/provider-setup/areas",
+    "/provider/areas",
   );
   async function save() {
     if (inFlight.current) return;

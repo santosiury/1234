@@ -42,7 +42,7 @@ export function ProviderDashboard() {
   const next = !hasProfile
     ? {
         title: "Editar meu perfil profissional",
-        path: "/provider-setup/profile" as const,
+        path: "/provider/profile/edit" as const,
       }
     : !hasServices
       ? profile?.services.length
@@ -52,17 +52,17 @@ export function ProviderDashboard() {
           }
         : {
             title: "Adicionar serviço",
-            path: "/provider-setup/service" as const,
+            path: "/provider/services/edit" as const,
           }
       : !hasAreas
         ? profile?.areas.length
           ? {
               title: "Revisar onde atendo",
-              path: "/provider-setup/areas" as const,
+              path: "/provider/areas" as const,
             }
           : {
               title: "Informar onde atendo",
-              path: "/provider-setup/area" as const,
+              path: "/provider/areas/edit" as const,
             }
         : null;
   return (
@@ -88,7 +88,7 @@ export function ProviderDashboard() {
             next && (
               <PrimaryButton
                 title={next.title}
-                onPress={() => router.push(next.path)}
+                onPress={() => router.push(next.path, { withAnchor: true })}
               />
             )
           )}
@@ -112,11 +112,16 @@ export function ProviderDashboard() {
               description="As cidades e os bairros atendidos."
               complete={hasAreas}
               icon="location-outline"
-              onPress={() => router.push("/provider-setup/areas")}
+              onPress={() => router.push("/provider/areas")}
             />
           </View>
         </>
       )}
+      <TextButton title="Minha conta" onPress={() => router.push("/account")} />
+      <TextButton
+        title="Solicitações recebidas"
+        onPress={() => router.push("/provider/requests", { withAnchor: true })}
+      />
     </ScreenContainer>
   );
 }
@@ -129,6 +134,8 @@ export function ProviderProfileOverview() {
         title="Meu perfil"
         subtitle="As informações que os clientes veem."
         topic="profile"
+        back
+        onBack={() => router.dismissTo("/provider")}
       />
       <RemoteStatus {...result} />
       {!!notice.message && <Feedback message={notice.message} error={false} />}
@@ -144,7 +151,9 @@ export function ProviderProfileOverview() {
           </View>
           <PrimaryButton
             title="Editar meu perfil profissional"
-            onPress={() => router.push("/provider-setup/profile")}
+            onPress={() =>
+              router.push("/provider/profile/edit", { withAnchor: true })
+            }
           />
         </>
       )}
@@ -152,7 +161,7 @@ export function ProviderProfileOverview() {
         title="Onde atendo"
         description="Cidades e bairros atendidos"
         icon="location-outline"
-        onPress={() => router.push("/provider-setup/areas")}
+        onPress={() => router.replace("/provider/areas", { withAnchor: true })}
       />
       <ActionRow
         title="Minha conta"
@@ -168,13 +177,18 @@ export function ProviderServices() {
   const notice = useProviderNotice("services");
   return (
     <ScreenContainer>
-      <ProviderHeader title="Meus serviços" topic="services" />
+      <ProviderHeader
+        title="Meus serviços"
+        topic="services"
+        back
+        onBack={() => router.dismissTo("/provider")}
+      />
       <PrimaryButton
         title="Adicionar serviço"
         disabled={!result.data}
         onPress={() => {
           notice.clear();
-          router.push("/provider-setup/service");
+          router.push("/provider/services/edit", { withAnchor: true });
         }}
       />
       {!!notice.message && <Feedback message={notice.message} error={false} />}
@@ -195,12 +209,13 @@ export function ProviderServices() {
               ) &&
               !result.data!.areas.some((area) => area.isActive)
             )
-              router.push(
+              router.replace(
                 result.data!.areas.length
-                  ? "/provider-setup/areas"
-                  : "/provider-setup/area",
+                  ? "/provider/areas"
+                  : "/provider/areas/edit",
+                { withAnchor: true },
               );
-            else router.push("/provider");
+            else router.dismissTo("/provider");
           }}
         />
       )}
@@ -228,7 +243,7 @@ export function ProviderServices() {
               onEdit={() => {
                 notice.clear();
                 router.push({
-                  pathname: "/provider-setup/service",
+                  pathname: "/provider/services/edit",
                   params: { id: service.id },
                 });
               }}
@@ -257,6 +272,7 @@ export function ProviderAreas() {
         title="Onde atendo"
         subtitle="Informe as cidades e os bairros atendidos."
         topic="areas"
+        onBack={() => router.dismissTo("/provider")}
         back
       />
       <PrimaryButton
@@ -264,7 +280,7 @@ export function ProviderAreas() {
         disabled={!result.data}
         onPress={() => {
           notice.clear();
-          router.push("/provider-setup/area");
+          router.push("/provider/areas/edit", { withAnchor: true });
         }}
       />
       {!!notice.message && <Feedback message={notice.message} error={false} />}
@@ -294,7 +310,7 @@ export function ProviderAreas() {
               onEdit={() => {
                 notice.clear();
                 router.push({
-                  pathname: "/provider-setup/area",
+                  pathname: "/provider/areas/edit",
                   params: { id: area.id },
                 });
               }}

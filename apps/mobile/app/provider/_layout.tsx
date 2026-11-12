@@ -1,12 +1,15 @@
 import { useSession } from "../../src/auth/session";
-import { Redirect } from "expo-router";
-import { Tabs } from "expo-router/js-tabs";
-import { TabIcon, useTabBarOptions } from "../../src/components/TabIcon";
+import { Redirect, Stack } from "expo-router";
 import { useMode } from "../../src/mode";
-export default function Layout() {
-  const tabBarOptions = useTabBarOptions();
+import { theme } from "../../src/theme";
+
+export const unstable_settings = { anchor: "index" };
+
+export default function ProviderLayout() {
   const { mode } = useMode();
   const { state } = useSession();
+  // Let restoration finish before resolving a deep link; never select a mode implicitly.
+  if (state.status === "loading") return null;
   if (mode !== "provider")
     return (
       <Redirect
@@ -22,43 +25,25 @@ export default function Layout() {
       />
     );
   return (
-    <Tabs screenOptions={tabBarOptions}>
-      <Tabs.Screen
+    <Stack
+      key={state.user?.id ?? "guest"}
+      screenOptions={{
+        headerShown: false,
+        gestureEnabled: true,
+        contentStyle: { backgroundColor: theme.colors.background },
+      }}
+    >
+      <Stack.Screen
         name="index"
-        options={{
-          title: "Painel",
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="grid-outline" focused={focused} size={size} />
-          ),
-        }}
+        options={{ title: "Meu espaço profissional" }}
       />
-      <Tabs.Screen
+      <Stack.Screen name="services" options={{ title: "Meus serviços" }} />
+      <Stack.Screen name="profile" options={{ title: "Meu perfil" }} />
+      <Stack.Screen name="areas" options={{ title: "Onde atendo" }} />
+      <Stack.Screen
         name="requests"
-        options={{
-          title: "Recebidas",
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="file-tray-outline" focused={focused} size={size} />
-          ),
-        }}
+        options={{ title: "Solicitações recebidas" }}
       />
-      <Tabs.Screen
-        name="services"
-        options={{
-          title: "Serviços",
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="construct-outline" focused={focused} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Perfil",
-          tabBarIcon: ({ focused, size }) => (
-            <TabIcon name="person-outline" focused={focused} size={size} />
-          ),
-        }}
-      />
-    </Tabs>
+    </Stack>
   );
 }

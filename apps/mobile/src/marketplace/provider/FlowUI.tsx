@@ -20,7 +20,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, usePreventRemove, type Href } from "expo-router";
+import {
+  router,
+  usePreventRemove,
+  useNavigation,
+  type Href,
+} from "expo-router";
 import { useSession } from "../../auth/session";
 import { Header, PrimaryButton, TextButton, ui } from "../../components/ui";
 import { theme } from "../../theme";
@@ -331,23 +336,34 @@ export function StepRow({
 /** Protect native back, gestures and explicit cancel through the SDK 58 router API. */
 export function useFormExit(dirty: boolean, busy: boolean, fallback: Href) {
   const { manager, state } = useSession();
+  const navigation = useNavigation();
   const [leaving, setLeaving] = useState(false);
   const [allowed, setAllowed] = useState(false);
   const pending = useRef<(() => void) | null>(null);
   const disable = usePreventRemove(
     (dirty || busy) && !allowed && !!state.user,
-    ({ repeat }) => {
+    ({ data, repeat }) => {
+      const resume = () => {
+        if (
+          data.action.target &&
+          data.action.target !== navigation.getState()?.key
+        ) {
+          // SDK 58 repeat() adds the form's source key, invalid for a POP_TO targeting
+          // an ancestor Stack. Preserve the original action's source instead.
+          disable();
+          navigation.dispatch({ ...data.action, source: data.action.source });
+        } else repeat();
+      };
       if (!manager.state.user) {
         setAllowed(true);
-        repeat();
+        resume();
         return;
       }
-      pending.current = repeat;
+      pending.current = resume;
       setLeaving(true);
     },
   );
-  const leave = () =>
-    router.canGoBack() ? router.back() : router.replace(fallback);
+  const leave = () => router.dismissTo(fallback);
   const finish = () => {
     setAllowed(true);
     setLeaving(false);
@@ -356,6 +372,7 @@ export function useFormExit(dirty: boolean, busy: boolean, fallback: Href) {
   };
   const discard = () => {
     const next = pending.current;
+    pending.current = null;
     setAllowed(true);
     setLeaving(false);
     next?.();

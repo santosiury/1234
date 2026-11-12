@@ -8,14 +8,16 @@ Redesign visual em `feature/fase-2-2-visual`, baseado em `21ad687`: marca vetori
 
 Refinamento da experiência em `feature/fase-2-3-ux-prestador`, baseado em `ddf3697`: painel com etapas reais, formulários dedicados, gerenciamento com confirmação e ajuda contextual. Veja [o novo fluxo, validação e atualização no Windows/iPhone](docs/fase-2-3-ux-prestador.md). Nenhuma migration ou alteração do banco é necessária.
 
+Correção de navegação: o prestador agora usa uma Stack com painel, seções e formulários, além de acesso direto pela conta e home. Veja [hierarquia, testes e roteiro no iPhone](docs/correcao-navegacao-prestador.md).
+
 ## Estrutura
 
 ```text
 omini/                         # raiz do checkout (pasta 1234 na nuvem)
   apps/mobile/                 # Expo SDK 58, Router, React Native, TypeScript
     app/client/                # abas de cliente
-    app/provider/              # abas de prestador
-    app/provider-setup/        # formulários profissionais e áreas, fora das abas
+    app/provider/              # Stack profissional; seções e formulários aninhados
+    app/provider-setup/        # aliases dos antigos endereços profissionais
     app/professional/[id].tsx   # detalhes com retorno
     src/components/            # componentes e identidade visual
     src/demo/                  # catálogo fictício, somente no modo demonstrativo
@@ -33,7 +35,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [UX do prestador — atualização sem migration e roteiro no iPhone](docs/fase-2-3-ux-prestador.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [correção de navegação — atualização e roteiro no iPhone](docs/correcao-navegacao-prestador.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 

@@ -1,10 +1,10 @@
-import Demo from "../../src/demo/screens/Services";
+import Demo from "../../../src/demo/screens/Services";
 import {
   ProviderServices,
   ProviderGuest,
-} from "../../src/marketplace/ProviderScreens";
-import { useMode } from "../../src/mode";
-import { useSession } from "../../src/auth/session";
+} from "../../../src/marketplace/ProviderScreens";
+import { useMode } from "../../../src/mode";
+import { useSession } from "../../../src/auth/session";
 export default function Screen() {
   const { catalogSource } = useMode();
   const { state } = useSession();

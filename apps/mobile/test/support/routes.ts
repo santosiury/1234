@@ -6,11 +6,11 @@ import Categories from "../../app/client/categories";
 import Search from "../../app/client/search";
 import Requests from "../../app/client/requests";
 import ClientProfile from "../../app/client/profile";
-import ProviderLayout from "../../app/provider/_layout";
+import * as ProviderLayout from "../../app/provider/_layout";
 import Provider from "../../app/provider/index";
 import Received from "../../app/provider/requests";
-import Services from "../../app/provider/services";
-import ProviderProfile from "../../app/provider/profile";
+import Services from "../../app/provider/services/index";
+import ProviderProfile from "../../app/provider/profile/index";
 import Detail from "../../app/professional/[id]";
 import NotFound from "../../app/+not-found";
 import Login from "../../app/login";
@@ -21,6 +21,13 @@ import ServiceForm from "../../app/provider-setup/service";
 import ProfileForm from "../../app/provider-setup/profile";
 import Areas from "../../app/provider-setup/areas";
 import AreaForm from "../../app/provider-setup/area";
+import * as ServicesLayout from "../../app/provider/services/_layout";
+import * as ProfileLayout from "../../app/provider/profile/_layout";
+import * as AreasLayout from "../../app/provider/areas/_layout";
+import CanonicalServiceForm from "../../app/provider/services/edit";
+import CanonicalProfileForm from "../../app/provider/profile/edit";
+import CanonicalAreas from "../../app/provider/areas/index";
+import CanonicalAreaForm from "../../app/provider/areas/edit";
 export const routes = {
   _layout: Root,
   index: Welcome,
@@ -33,8 +40,15 @@ export const routes = {
   "provider/_layout": ProviderLayout,
   "provider/index": Provider,
   "provider/requests": Received,
-  "provider/services": Services,
-  "provider/profile": ProviderProfile,
+  "provider/services/_layout": ServicesLayout,
+  "provider/services/index": Services,
+  "provider/services/edit": CanonicalServiceForm,
+  "provider/profile/_layout": ProfileLayout,
+  "provider/profile/index": ProviderProfile,
+  "provider/profile/edit": CanonicalProfileForm,
+  "provider/areas/_layout": AreasLayout,
+  "provider/areas/index": CanonicalAreas,
+  "provider/areas/edit": CanonicalAreaForm,
   "professional/[id]": Detail,
   "+not-found": NotFound,
   login: Login,

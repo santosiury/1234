@@ -1,3 +1,4 @@
+import { useProfessionalEntry } from "../src/marketplace/provider/navigation";
 import { useState } from "react";
 import { useSession } from "../src/auth/session";
 import { StyleSheet, Text, View } from "react-native";
@@ -16,6 +17,7 @@ import { theme } from "../src/theme";
 export default function Welcome() {
   const { setMode, setCatalogSource } = useMode();
   const { state, manager } = useSession();
+  const openProfessional = useProfessionalEntry();
   const [exploring, setExploring] = useState(false);
   return (
     <ScreenContainer dark compact>
@@ -31,10 +33,24 @@ export default function Welcome() {
       </View>
       <View style={ui.group}>
         {state.user ? (
-          <PrimaryButton
-            title="Minha conta"
-            onPress={() => router.push("/account")}
-          />
+          state.user.profiles.provider ? (
+            <>
+              <PrimaryButton
+                title="Meu espaço profissional"
+                onPress={openProfessional}
+              />
+              <TextButton
+                title="Minha conta"
+                light
+                onPress={() => router.push("/account")}
+              />
+            </>
+          ) : (
+            <PrimaryButton
+              title="Minha conta"
+              onPress={() => router.push("/account")}
+            />
+          )
         ) : (
           <>
             <PrimaryButton

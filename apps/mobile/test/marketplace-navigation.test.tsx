@@ -6,6 +6,7 @@ import {
   testRouter,
 } from "expo-router/testing-library";
 import { router } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import type {
   CatalogCategory,
   CreateAreaInput,
@@ -311,7 +312,7 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
   await fireEvent.press(screen.getByText("Reativar serviço"));
   await fireEvent.press(screen.getByText("Confirmar reativação"));
   await screen.findByText("Serviço reativado.");
-  await testRouter.push("/provider-setup/areas");
+  await testRouter.push("/provider/areas");
   await fireEvent.press(
     await screen.findByRole("button", {
       name: /^Gerenciar área Araranguá\/SC/,
@@ -769,4 +770,319 @@ test("the first service leads to coverage and back to the completed professional
       name: "Onde atendo. Concluído. Abrir etapa.",
     }),
   ).toBeTruthy();
+});
+
+async function nativeBack() {
+  // Dispatches the same GO_BACK navigation intent used by native back; it does not exercise an iOS gesture recognizer.
+  await act(async () => router.back());
+}
+const providerSections = [
+  { path: "/provider/services", step: "Meus serviços", title: "Meus serviços" },
+  { path: "/provider/profile", step: "Meu perfil", title: "Meu perfil" },
+  { path: "/provider/areas", step: "Onde atendo", title: "Onde atendo" },
+] as const;
+
+test("every provider section opens as a stack page and native back returns to the dashboard without changing saved data", async () => {
+  completeFixture();
+  const saved = clone(profile);
+  await providerEntry();
+  for (const section of providerSections) {
+    await fireEvent.press(
+      await screen.findByRole("button", {
+        name: `${section.step}. Concluído. Abrir etapa.`,
+      }),
+    );
+    await screen.findByRole("header", { name: section.title });
+    expect(screen).toHavePathname(section.path);
+    expect(screen.getByRole("button", { name: "Voltar" })).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Painel" })).toBeNull();
+    await nativeBack();
+    expect(
+      await screen.findByRole("header", { name: "Meu espaço profissional" }),
+    ).toBeTruthy();
+    expect(screen).toHavePathname("/provider");
+  }
+  expect(profile).toEqual(saved);
+  expect(requests.filter((request) => request.method !== "GET")).toHaveLength(
+    0,
+  );
+});
+
+test.each(["services", "profile", "areas"] as const)(
+  "saving the %s form returns to its own section, then back returns to dashboard",
+  async (section) => {
+    await providerEntry();
+    const target = providerSections.find((item) =>
+      item.path.endsWith(section),
+    )!;
+    await fireEvent.press(
+      await screen.findByRole("button", {
+        name: new RegExp(`^${target.step}\\.`),
+      }),
+    );
+    await screen.findByRole("header", { name: target.title });
+    if (section === "services") {
+      await fireEvent.press(
+        screen.getByRole("button", { name: "Adicionar serviço" }),
+      );
+      await fireEvent.press(
+        await screen.findByRole("radio", { name: "Eletricista" }),
+      );
+      await fireEvent.changeText(
+        screen.getByLabelText("Título do serviço"),
+        "Instalação de tomadas",
+      );
+      await fireEvent.press(
+        screen.getByRole("button", { name: "Salvar serviço" }),
+      );
+      await screen.findByText("Serviço salvo.");
+      expect(profile.services).toHaveLength(1);
+    } else if (section === "profile") {
+      await fireEvent.press(
+        await screen.findByText("Editar meu perfil profissional"),
+      );
+      await screen.findByLabelText("Nome profissional");
+      await fireEvent.changeText(
+        screen.getByLabelText("Nome profissional"),
+        "João Elétrica",
+      );
+      await fireEvent.press(
+        screen.getByRole("button", { name: "Salvar perfil" }),
+      );
+      await screen.findByText("Perfil profissional salvo.");
+      expect(profile.professionalName).toBe("João Elétrica");
+    } else {
+      await fireEvent.press(
+        screen.getByRole("button", { name: "Adicionar área" }),
+      );
+      await screen.findByLabelText("Cidade atendida");
+      await fireEvent.press(
+        screen.getByRole("button", { name: "Salvar área" }),
+      );
+      await screen.findByText("Área de atendimento salva.");
+      expect(profile.areas).toHaveLength(1);
+    }
+    expect(screen).toHavePathname(target.path);
+    await nativeBack();
+    expect(
+      await screen.findByRole("header", { name: "Meu espaço profissional" }),
+    ).toBeTruthy();
+    expect(screen).toHavePathname("/provider");
+  },
+);
+
+test("account reopens the professional dashboard in the same mode without a client round trip", async () => {
+  completeFixture();
+  await providerEntry();
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
+  await screen.findByText("pessoa@example.test");
+  expect(
+    screen.getByRole("button", { name: "Mudar para cliente" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Mudar para prestador" }),
+  ).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Meu espaço profissional" }),
+  );
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
+  expect(screen).toHavePathname("/provider");
+  await fireEvent.press(
+    screen.getByRole("button", {
+      name: "Meus serviços. Concluído. Abrir etapa.",
+    }),
+  );
+  await screen.findByRole("header", { name: "Meus serviços" });
+  await fireEvent.press(screen.getByRole("button", { name: "Voltar" }));
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
+  expect(screen).toHavePathname("/provider");
+  expect(auth.value.profiles).toEqual({ client: true, provider: true });
+});
+
+test("welcome offers explicit professional entry while leaving the selected client experience unchanged until tapped", async () => {
+  auth.value.profiles.provider = true;
+  await renderRouter(routes, { initialUrl: "/login" });
+  await screen.findByText("Que bom ter você aqui");
+  await login();
+  await testRouter.push("/");
+  expect(
+    screen.getByRole("button", { name: "Meu espaço profissional" }),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
+  expect(
+    await screen.findByRole("button", { name: "Mudar para prestador" }),
+  ).toBeTruthy();
+  await nativeBack();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Meu espaço profissional" }),
+  );
+  expect(
+    await screen.findByRole("header", { name: "Meu espaço profissional" }),
+  ).toBeTruthy();
+  expect(screen).toHavePathname("/provider");
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Mudar para cliente" }),
+  );
+  await screen.findByText("De que você precisa hoje?");
+  await testRouter.push("/client/profile");
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Meu espaço profissional" }),
+  );
+  expect(
+    await screen.findByRole("header", { name: "Meu espaço profissional" }),
+  ).toBeTruthy();
+});
+
+test("explicit professional entry from demo account restores the real catalog without changing modes automatically", async () => {
+  await providerEntry();
+  await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
+  await fireEvent.press(await screen.findByText("Voltar às boas-vindas"));
+  await fireEvent.press(screen.getByText("Explorar Omini"));
+  await fireEvent.press(screen.getByText("Conhecer o modo prestador"));
+  await screen.findByText("Seu talento faz a diferença.");
+  await fireEvent.press(screen.getByText("Perfil profissional"));
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Meu espaço profissional" }),
+  );
+  expect(
+    await screen.findByRole("header", { name: "Meu espaço profissional" }),
+  ).toBeTruthy();
+  expect(screen.queryByText("Painel demonstrativo")).toBeNull();
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: "Meus serviços. Pendente. Abrir etapa.",
+    }),
+  );
+  expect(
+    await screen.findByText("Seu primeiro serviço começa aqui"),
+  ).toBeTruthy();
+});
+
+const directProviderRoutes = [
+  { path: "/provider/services", section: "Meus serviços", form: false },
+  { path: "/provider/profile", section: "Meu perfil", form: false },
+  { path: "/provider/areas", section: "Onde atendo", form: false },
+  { path: "/provider/services/edit", section: "Meus serviços", form: true },
+  { path: "/provider/profile/edit", section: "Meu perfil", form: true },
+  { path: "/provider/areas/edit", section: "Onde atendo", form: true },
+  {
+    path: "/provider-setup/service?id=40000000-0000-4000-8000-000000000001",
+    section: "Meus serviços",
+    form: true,
+  },
+  { path: "/provider-setup/profile", section: "Meu perfil", form: true },
+  {
+    path: "/provider-setup/area?id=50000000-0000-4000-8000-000000000001",
+    section: "Onde atendo",
+    form: true,
+  },
+  { path: "/provider-setup/areas", section: "Onde atendo", form: false },
+];
+test.each(directProviderRoutes)(
+  "cold restored deep link $path has a section/dashboard back hierarchy without account history",
+  async ({ path, section, form }) => {
+    completeFixture();
+    const saved = clone(profile);
+    auth.value.profiles = { client: false, provider: true };
+    const read = jest.mocked(SecureStore.getItemAsync);
+    read.mockResolvedValue(
+      JSON.stringify({ token: "x".repeat(43), intent: "refresh" }),
+    );
+    try {
+      await renderRouter(routes, { initialUrl: path });
+      if (form) {
+        const label =
+          section === "Meus serviços"
+            ? "Título do serviço"
+            : section === "Meu perfil"
+              ? "Nome profissional"
+              : "Cidade atendida";
+        await screen.findByLabelText(label);
+        if (path.includes("?id="))
+          expect(screen.getByLabelText(label)).toHaveDisplayValue(
+            section === "Meus serviços" ? "Reparo elétrico" : "Araranguá",
+          );
+        await nativeBack();
+      }
+      await screen.findByRole("header", { name: section });
+      await nativeBack();
+      expect(
+        await screen.findByRole("header", { name: "Meu espaço profissional" }),
+      ).toBeTruthy();
+      expect(screen).toHavePathname("/provider");
+      expect(profile).toEqual(saved);
+      expect(requests.filter((r) => r.method !== "GET")).toHaveLength(0);
+    } finally {
+      read.mockResolvedValue(null);
+    }
+  },
+);
+
+test("native back and dashboard dismissal both protect a dirty form until discard is confirmed", async () => {
+  completeFixture();
+  const saved = clone(profile);
+  await providerEntry();
+  await servicesList();
+  await fireEvent.press(screen.getByText("Adicionar serviço"));
+  await screen.findByLabelText("Título do serviço");
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Rascunho protegido",
+  );
+  await nativeBack();
+  await fireEvent.press(await screen.findByText("Continuar editando"));
+  expect(screen.getByLabelText("Título do serviço")).toHaveDisplayValue(
+    "Rascunho protegido",
+  );
+  await act(async () => router.dismissTo("/provider"));
+  await fireEvent.press(await screen.findByText("Descartar alterações"));
+  expect(screen).toHavePathname("/provider");
+  expect(
+    await screen.findByRole("header", { name: "Meu espaço profissional" }),
+  ).toBeTruthy();
+  expect(screen).toHavePathname("/provider");
+  expect(profile).toEqual(saved);
+  expect(requests.filter((r) => r.method !== "GET")).toHaveLength(0);
+});
+
+test("continuing from the first service to coverage replaces the section so back after saving still reaches dashboard", async () => {
+  await providerEntry();
+  await fireEvent.press(
+    await screen.findByRole("button", { name: "Adicionar serviço" }),
+  );
+  await fireEvent.press(
+    await screen.findByRole("radio", { name: "Eletricista" }),
+  );
+  await fireEvent.changeText(
+    screen.getByLabelText("Título do serviço"),
+    "Instalação de tomadas",
+  );
+  await fireEvent.press(screen.getByRole("button", { name: "Salvar serviço" }));
+  await fireEvent.press(await screen.findByText("Continuar: onde atendo"));
+  await screen.findByLabelText("Cidade atendida");
+  await fireEvent.press(screen.getByRole("button", { name: "Salvar área" }));
+  await screen.findByText("Área de atendimento salva.");
+  expect(screen).toHavePathname("/provider/areas");
+  await nativeBack();
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
+  expect(screen).toHavePathname("/provider");
+  expect(profile.services).toHaveLength(1);
+  expect(profile.areas).toHaveLength(1);
+});
+
+test("opening coverage from professional profile keeps native back pointed at the dashboard", async () => {
+  completeFixture();
+  await providerEntry();
+  await fireEvent.press(
+    await screen.findByRole("button", {
+      name: "Meu perfil. Concluído. Abrir etapa.",
+    }),
+  );
+  await screen.findByRole("header", { name: "Meu perfil" });
+  await fireEvent.press(screen.getByRole("button", { name: "Onde atendo" }));
+  await screen.findByRole("header", { name: "Onde atendo" });
+  await nativeBack();
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
+  expect(screen).toHavePathname("/provider");
 });
