@@ -21,6 +21,9 @@ model User {
   authSessions    AuthSession[]
   clientProfile   ClientProfile?
   providerProfile ProviderProfile?
+  sentRequests ServiceRequest[] @relation("RequestClient")
+  receivedRequests ServiceRequest[] @relation("RequestProvider")
+  requestEvents ServiceRequestEvent[]
 
   @@index([isActive, createdAt])
 }
@@ -47,6 +50,7 @@ model ProviderProfile {
   user             User                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   services         ProviderService[]
   serviceAreas     ProviderServiceArea[]
+  requests         ServiceRequest[]
 
   @@index([isActive, createdAt])
 }
@@ -75,6 +79,7 @@ model ProviderService {
   updatedAt   DateTime        @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
   provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   category    ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  requests    ServiceRequest[]
 
   @@unique([providerId, categoryId, title])
   @@index([categoryId, isActive, providerId])
@@ -129,4 +134,55 @@ model RefreshToken {
 
   @@index([sessionId])
   @@index([expiresAt])
+}
+
+model ServiceRequest {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  clientUserId String @db.UniqueIdentifier
+  providerUserId String @db.UniqueIdentifier
+  providerId String @db.UniqueIdentifier
+  providerServiceId String @db.UniqueIdentifier
+  clientNameSnapshot String @db.NVarChar(120)
+  providerNameSnapshot String @db.NVarChar(120)
+  serviceTitleSnapshot String @db.NVarChar(120)
+  status String @default("REQUESTED") @db.NVarChar(32)
+  description String @db.NVarChar(1000)
+  city String @db.NVarChar(100)
+  state String @db.Char(2)
+  neighborhood String @default("") @db.NVarChar(100)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  acceptedAt DateTime? @db.DateTime2
+  startedAt DateTime? @db.DateTime2
+  completionProposedAt DateTime? @db.DateTime2
+  completedAt DateTime? @db.DateTime2
+  cancelledAt DateTime? @db.DateTime2
+  version Int @default(1)
+  idempotencyKey String @db.UniqueIdentifier
+  client User @relation("RequestClient", fields: [clientUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  providerUser User @relation("RequestProvider", fields: [providerUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service ProviderService @relation(fields: [providerServiceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  events ServiceRequestEvent[]
+  @@unique([clientUserId, idempotencyKey])
+  @@index([clientUserId, status, createdAt, id])
+  @@index([providerUserId, status, createdAt, id])
+}
+
+model ServiceRequestEvent {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  requestId String @db.UniqueIdentifier
+  actorUserId String @db.UniqueIdentifier
+  previousStatus String? @db.NVarChar(32)
+  newStatus String @db.NVarChar(32)
+  action String @db.NVarChar(32)
+  occurredAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  reason String? @db.NVarChar(500)
+  version Int
+  idempotencyKey String @db.UniqueIdentifier
+  payloadHash String @db.Char(64)
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([actorUserId, idempotencyKey])
+  @@unique([requestId, version])
 }

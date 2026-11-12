@@ -20,6 +20,15 @@ async function main() {
     "AuthSession",
     "RefreshToken",
   ]);
+  await validateInitialMigration(
+    current,
+    await readFile(
+      "prisma/migrations/20261112000000_service_requests/migration.sql",
+      "utf8",
+    ),
+    ["ServiceRequest", "ServiceRequestEvent"],
+  );
+  console.log("Incremental requests SQL contract passed; no SQL was executed.");
   console.log(
     "Incremental authentication SQL contract passed; no SQL was executed.",
   );

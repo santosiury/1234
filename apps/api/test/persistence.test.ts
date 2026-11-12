@@ -185,7 +185,7 @@ test("connection and disconnect failures do not leak driver messages in warnings
 });
 
 test("generated SQL Server client preserves business models and adds auth without connecting", async () => {
-  assert.equal(Object.keys(Prisma.ModelName).length, 9);
+  assert.equal(Object.keys(Prisma.ModelName).length, 11);
   const client = createDatabaseClient(
     "sqlserver://not-used.invalid:1433;database=OminiDB;user=fixture;password={fixture};encrypt=true",
   );
