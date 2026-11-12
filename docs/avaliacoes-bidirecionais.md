@@ -1,12 +1,22 @@
 # Proposta futura: avaliações bidirecionais
 
-**Especificação para depois da conclusão real das solicitações na Fase 2.4. Não implementada nesta entrega.** Não existem novos endpoints, tabelas, migrations, cálculos de reputação ou regras de avaliação em execução. Os nomes de entidades e caminhos abaixo são propostas que precisam ser reconciliadas com o modelo definitivo das solicitações.
+**Especificação para depois da conclusão real das solicitações na Fase 2.4. Não implementada nesta entrega.** Não existem novos endpoints, tabelas, migrations, cálculos de reputação ou regras de avaliação em execução. As estruturas de avaliação abaixo continuam propostas; a vinculação usa agora o domínio de solicitações implementado na Fase 2.4, ainda pendente de aplicação revisada no banco e validação física.
 
 ## Condições para iniciar
 
 A Fase 2.4 deve primeiro estabelecer participantes imutáveis, conclusão verificável, histórico de transições e tratamento de disputas. Um botão ou payload do aplicativo dizendo que o serviço foi concluído não é prova suficiente. A conclusão deve ser autorizada pelo fluxo real de solicitação, com evidência/auditoria e possibilidade de contestação.
 
 Cada solicitação elegível deve identificar uma conta cliente e uma conta prestadora distintas, com perfis pertencentes a essas contas. Ter ambos os perfis na mesma conta não permite contratar/avaliar a si próprio. Nenhuma avaliação poderá nascer de serviços apenas anunciados no catálogo, demonstrações, solicitações canceladas, pendentes ou inexistentes.
+
+## Vínculo com os modelos reais da Fase 2.4
+
+A fonte canônica é `ServiceRequest.id`. Participantes imutáveis: `clientUserId` e **`providerUserId`** (IDs de `User` distintos), `providerId` (`ProviderProfile`) e `providerServiceId` (`ProviderService`). Não inferir o destinatário pelo proprietário atual do anúncio nem aceitar esses IDs do payload de avaliação. `serviceTitleSnapshot`, `clientNameSnapshot` e `providerNameSnapshot` preservam o contexto original, sem autorização para publicá-los automaticamente.
+
+Elegibilidade futura exige `status = COMPLETED`, `completedAt` não nulo e evento `ServiceRequestEvent` com `action = confirm-completion`, `newStatus = COMPLETED`, `actorUserId = clientUserId` e versão correspondente. `propose-completion`/`AWAITING_CONFIRMATION` não autorizam avaliação. O histórico append-only usa `requestId`, `version`, `previousStatus`, `newStatus`, `occurredAt` e `reason`; uma criação/transição por versão. Datas vêm do servidor SQL em UTC. O código atual torna COMPLETED final, e reabrir é permitido apenas antes da confirmação final; eventual revogação/disputa posterior requer novo domínio auditado, ainda não implementado.
+
+`Review.requestId` e `ReviewWindow.requestId` deverão referenciar **`ServiceRequest.id`** com FKs NoAction. Direção cliente → prestador deriva autor de `clientUserId` e destinatário de `providerUserId`; direção inversa troca esses dois IDs. Média pública deve agrupar as avaliações válidas recebidas pelo `providerId`/conta original de forma consistente, sem misturar o que o prestador escreveu. Criar unicidade `(requestId,direction)` e validar elegibilidade/participação na mesma transação de envio. Campos relacionados à conclusão/disputa não devem ser copiados do mobile.
+
+O início da janela futura usa `ServiceRequest.completedAt`. Listas públicas nunca expõem IDs de usuário/solicitação, descrição do atendimento, motivos de reabertura ou localização. As APIs privadas de solicitações atuais só retornam nomes preservados e o papel do autor do evento; não devem ser transformadas em fonte pública de reputação. Ver [modelo, estados e implantação da Fase 2.4](fase-2-4-solicitacoes.md).
 
 ## Política proposta
 
@@ -38,7 +48,7 @@ Se uma avaliação aguardar moderação, não publicar a outra antecipadamente p
 
 ## Modelagem incremental SQL Server / Prisma
 
-O modelo de solicitação ainda não existe nesta fase. Depois de definido e validado, revisar o desenho abaixo e criar **apenas migrations incrementais**, sem recriar OminiDB, apagar registros existentes ou alterar as oito categorias.
+O modelo `ServiceRequest` foi implementado na Fase 2.4. Depois de sua implantação revisada e validação real, revisar o desenho abaixo e criar **apenas migrations incrementais**, sem recriar OminiDB, apagar registros existentes ou alterar as oito categorias.
 
 | Entidade proposta | Campos e restrições principais                                                                                                                                                                       |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

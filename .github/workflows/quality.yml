@@ -12,6 +12,7 @@ on:
         feature/fase-2-2-visual,
         feature/fase-2-3-prestadores,
         feature/fase-2-3-ux-prestador,
+        feature/fase-2-4-solicitacoes,
       ]
 permissions:
   contents: read

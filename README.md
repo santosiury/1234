@@ -1,8 +1,10 @@
-# Omini · Experiência do prestador (Fase 2.3)
+# Omini · Solicitações e contratação direta (Fase 2.4)
 
-Marketplace mobile de serviços para Araranguá, SC. Um aplicativo Android/iOS, duas experiências, cadastro/login e sessão segura. Esta fase integra perfil profissional, serviços, áreas de atendimento e catálogo público ao SQL Server existente. Contratação, pagamentos e avaliações continuam indisponíveis. A demonstração está separada do catálogo real.
+Marketplace mobile de serviços para Araranguá, SC. Cliente solicita um serviço do catálogo real; prestador aceita, inicia e informa a conclusão; cliente confirma ou reabre com motivo. Sessão segura e experiências de cliente/prestador preservadas. Sem pagamentos, chat ou avaliações funcionais.
 
-Atualização e testes locais: [Fase 2.3 — prestadores, catálogo, Windows e iPhone](docs/fase-2-3-prestadores.md). **Nenhuma nova migration, seed ou alteração de credenciais é necessária nesta fase.**
+**Banco ainda pendente de revisão/aplicação:** esta entrega contém duas tabelas novas e GRANT incremental, sem executar SQL, migration ou seed no banco existente. A fase depende de implantação revisada e teste físico no iPhone. Siga [arquitetura, SQL completo, Windows e roteiro físico da Fase 2.4](docs/fase-2-4-solicitacoes.md).
+
+Guia histórico da base já validada: [Fase 2.3 — prestadores e catálogo](docs/fase-2-3-prestadores.md). As notas de “sem migration” abaixo referem-se somente às respectivas entregas históricas.
 
 Redesign visual em `feature/fase-2-2-visual`, baseado em `21ad687`: marca vetorial, preto/branco/verde-lima, Inter local e splash Expo SDK 58. Consulte [o guia visual e o roteiro de validação no iPhone](docs/fase-2-2-visual.md). Autenticação, SecureStore e banco permanecem preservados; esta etapa não requer migrations.
 
@@ -20,15 +22,18 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
     app/client/                # abas de cliente
     app/provider/              # Stack profissional; seções e formulários aninhados
     app/provider-setup/        # aliases dos antigos endereços profissionais
+    app/service-request/       # formulário/revisão e retomada autenticada
+    src/requests/              # solicitações reais, histórico e diário seguro
     app/professional/[id].tsx   # detalhes com retorno
     src/components/            # componentes e identidade visual
     src/demo/                  # catálogo fictício, somente no modo demonstrativo
     src/marketplace/           # catálogo real, API e formulários do prestador
     test/                      # testes de navegação e busca
   apps/api/                    # NestJS 11, REST e Swagger
+    src/requests/              # domínio transacional, autorização e idempotência
     src/health/                # módulo de liveness
     src/marketplace/            # perfil, serviços, áreas e busca pública SQL Server
-    prisma/                    # schema sqlserver, migration inicial e seed
+    prisma/                    # schema sqlserver, migrations incrementais e seed
     test/                      # HTTP, Swagger, erros, CORS e configuração
   packages/shared/             # contratos TypeScript, sem dependências de runtime
   scripts/                     # verificações de rotas e arquivos sensíveis
@@ -37,7 +42,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [barra profissional — atualização e roteiro no iPhone](docs/navegacao-inferior-avaliacoes-visuais.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.4 — atualização, revisão da migration e teste no iPhone](docs/fase-2-4-solicitacoes.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 
@@ -46,7 +51,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch feature/fase-2-3-ux-prestador
+git switch feature/fase-2-4-solicitacoes
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env
@@ -75,7 +80,7 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:3000/api
 npm run dev:mobile
 ```
 
-Atualize o **Expo Go da App Store com suporte ao SDK 58**. Abra a Câmera do iPhone, escaneie o QR e escolha abrir no Expo Go. Permita acesso à rede local em Ajustes → Apps → Expo Go → Rede Local. O iPhone e o Windows precisam estar na mesma rede Wi-Fi. A base da Fase 2.3 foi validada no iPhone pelo responsável; este refinamento de interface ainda precisa de validação física conforme o novo roteiro. Não use o comando de web para substituir o aplicativo nativo.
+Atualize o **Expo Go da App Store com suporte ao SDK 58**. Abra a Câmera do iPhone, escaneie o QR e escolha abrir no Expo Go. Permita acesso à rede local em Ajustes → Apps → Expo Go → Rede Local. O iPhone e o Windows precisam estar na mesma rede Wi-Fi. A base da Fase 2.3 foi validada no iPhone pelo responsável; o fluxo de solicitações da Fase 2.4 ainda precisa de implantação revisada no banco e validação física conforme o novo roteiro. Não use o comando de web para substituir o aplicativo nativo.
 
 Reinicie o Expo com cache limpo após mudar variáveis:
 
@@ -88,7 +93,7 @@ npm run dev:mobile -- --clear
 1. Boas-vindas → **Explorar como cliente**.
 2. Categorias → Eletricista → Ana Martins → voltar.
 3. Busca aceita nome, especialidade e bairro, sem diferenciar acentos. Termo inexistente mostra estado vazio. Remova o filtro para voltar ao catálogo completo.
-4. Solicitações mostra indisponibilidade, sem criar registros.
+4. Na demonstração, Solicitações mostra indisponibilidade. No catálogo real autenticado, após implantar a Fase 2.4, siga o roteiro de envio/aceite/conclusão do novo guia.
 5. Perfil → Testar conexão (health check real da sua API).
 6. Perfil → **Mudar para prestador** → painel, disponibilidade demonstrativa, recebidas, serviços e perfil.
 7. No perfil profissional, alterne de volta a cliente. Sem login, reiniciar volta à entrada demonstrativa. Contas autenticadas restauram a sessão com Expo SecureStore; veja o roteiro da Fase 2.2.
@@ -133,4 +138,4 @@ Persistência opcional: consulte [Fase 2.1 — configuração, permissões e mig
 
 ## Limites e segurança
 
-Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. Há uma migration inicial versionada para seis entidades, ainda não aplicada por este ambiente; não há credenciais reais no repositório. A API implementa autenticação e rate limiting por processo, sem contratação. Antes de implantação, valide SQL/iPhone e configure HTTPS; múltiplas instâncias exigem limite compartilhado. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).
+Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. As migrations históricas de fundação/autenticação foram preservadas; a nova migration da Fase 2.4 adiciona solicitações e histórico e aguarda aplicação revisada. Não há credenciais reais no repositório. A API implementa autenticação, catálogo e solicitações autorizadas, com rate limiting por processo. Antes de implantação, valide SQL/iPhone e configure HTTPS; múltiplas instâncias exigem limite compartilhado. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).
