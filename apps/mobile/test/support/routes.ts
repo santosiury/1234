@@ -4,12 +4,12 @@ import ClientLayout from "../../app/client/_layout";
 import Client from "../../app/client/index";
 import Categories from "../../app/client/categories";
 import Search from "../../app/client/search";
-import Requests from "../../app/client/requests";
+import Requests from "../../app/client/requests/index";
 import ClientProfile from "../../app/client/profile";
 import * as ProviderLayout from "../../app/provider/_layout";
 import Provider from "../../app/provider/index";
 import ProfessionalAccount from "../../app/provider/account";
-import Received from "../../app/provider/requests";
+import Received from "../../app/provider/requests/index";
 import Services from "../../app/provider/services/index";
 import ProviderProfile from "../../app/provider/profile/index";
 import Detail from "../../app/professional/[id]";
@@ -29,6 +29,12 @@ import CanonicalServiceForm from "../../app/provider/services/edit";
 import CanonicalProfileForm from "../../app/provider/profile/edit";
 import CanonicalAreas from "../../app/provider/areas/index";
 import CanonicalAreaForm from "../../app/provider/areas/edit";
+import * as SentLayout from "../../app/client/requests/_layout";
+import * as ReceivedLayout from "../../app/provider/requests/_layout";
+import SentDetail from "../../app/client/requests/[id]";
+import ReceivedDetail from "../../app/provider/requests/[id]";
+import NewRequest from "../../app/service-request/new";
+import ResumeRequest from "../../app/service-request/resume";
 export const routes = {
   _layout: Root,
   index: Welcome,
@@ -36,11 +42,17 @@ export const routes = {
   "client/index": Client,
   "client/categories": Categories,
   "client/search": Search,
-  "client/requests": Requests,
+  "client/requests/_layout": SentLayout,
+  "client/requests/index": Requests,
+  "client/requests/[id]": SentDetail,
   "client/profile": ClientProfile,
   "provider/_layout": ProviderLayout,
   "provider/index": Provider,
-  "provider/requests": Received,
+  "provider/requests/_layout": ReceivedLayout,
+  "provider/requests/index": Received,
+  "provider/requests/[id]": ReceivedDetail,
+  "service-request/new": NewRequest,
+  "service-request/resume": ResumeRequest,
   "provider/account": ProfessionalAccount,
   "provider/services/_layout": ServicesLayout,
   "provider/services/index": Services,

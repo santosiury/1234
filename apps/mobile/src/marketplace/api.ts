@@ -15,6 +15,17 @@ import type {
 import { AuthFailure } from "../auth/api";
 import type { SessionManager } from "../auth/session-manager";
 const messages: Record<string, string> = {
+  REQUESTS_UNAVAILABLE:
+    "As solicitações estão temporariamente indisponíveis. Tente novamente.",
+  CLIENT_REQUIRED: "Ative seu perfil cliente para solicitar um serviço.",
+  INVALID_TARGET:
+    "O serviço ou a área não está disponível. Confira o catálogo e a localização.",
+  SELF_REQUEST: "Você não pode solicitar seu próprio serviço.",
+  ACTION_FORBIDDEN: "Esta ação não está disponível para sua conta.",
+  INVALID_TRANSITION:
+    "Esta ação não está disponível no estado atual. Atualize a solicitação.",
+  IDEMPOTENCY_CONFLICT:
+    "Esse envio já foi utilizado. Confira suas solicitações antes de tentar novamente.",
   VALIDATION_ERROR: "Confira os campos e os limites indicados no formulário.",
   PROVIDER_REQUIRED:
     "Ative seu perfil de prestador na área da conta para continuar.",
@@ -104,6 +115,7 @@ export class MarketplaceHttp {
   constructor(
     private readonly baseUrl: () => string | undefined = () =>
       process.env.EXPO_PUBLIC_API_URL,
+    private readonly feature: "catalog" | "requests" = "catalog",
   ) {}
   async request(
     path: string,
@@ -148,7 +160,9 @@ export class MarketplaceHttp {
       throw new AuthFailure(
         0,
         "NETWORK",
-        "Não foi possível conectar ao catálogo. Verifique a rede e tente novamente.",
+        this.feature === "requests"
+          ? "Não foi possível conectar às solicitações. Verifique a rede e tente novamente."
+          : "Não foi possível conectar ao catálogo. Verifique a rede e tente novamente.",
       );
     }
     if (!response.ok) {
@@ -163,7 +177,9 @@ export class MarketplaceHttp {
         response.status,
         code,
         messages[code] ??
-          "O catálogo está temporariamente indisponível. Tente novamente.",
+          (this.feature === "requests"
+            ? "As solicitações estão temporariamente indisponíveis. Tente novamente."
+            : "O catálogo está temporariamente indisponível. Tente novamente."),
       );
     }
     try {

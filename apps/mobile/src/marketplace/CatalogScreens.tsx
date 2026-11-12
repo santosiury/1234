@@ -298,9 +298,13 @@ function LoadedDetail({ id }: { id: string }) {
             </View>
           ))}
           <PrimaryButton
-            title="Solicitar atendimento · em breve"
-            disabled
-            onPress={() => undefined}
+            title="Solicitar serviço"
+            onPress={() =>
+              router.navigate({
+                pathname: "/service-request/new",
+                params: { providerId: person.id },
+              })
+            }
           />
         </>
       )}

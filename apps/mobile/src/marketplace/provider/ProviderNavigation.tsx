@@ -30,7 +30,8 @@ export function ProviderNavigation() {
   const active =
     pathname === "/provider/account"
       ? "/provider/account"
-      : pathname === "/provider/requests"
+      : pathname === "/provider/requests" ||
+          pathname.startsWith("/provider/requests/")
         ? "/provider/requests"
         : "/provider";
   function open(path: Destination) {

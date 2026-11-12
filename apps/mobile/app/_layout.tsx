@@ -1,3 +1,4 @@
+import { RequestFeedbackProvider } from "../src/requests/feedback";
 import { useEffect } from "react";
 import { View } from "react-native";
 import { useFonts } from "expo-font";
@@ -33,17 +34,21 @@ export default function Layout() {
       <View style={{ flex: 1, backgroundColor: theme.colors.dark }}>
         <SessionProvider>
           <ModeProvider>
-            <ProviderUxProvider>
-              <SessionGate fontsReady={fontsReady}>
-                <StatusBar style="dark" />
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: theme.colors.background },
-                  }}
-                />
-              </SessionGate>
-            </ProviderUxProvider>
+            <RequestFeedbackProvider>
+              <ProviderUxProvider>
+                <SessionGate fontsReady={fontsReady}>
+                  <StatusBar style="dark" />
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: {
+                        backgroundColor: theme.colors.background,
+                      },
+                    }}
+                  />
+                </SessionGate>
+              </ProviderUxProvider>
+            </RequestFeedbackProvider>
           </ModeProvider>
         </SessionProvider>
       </View>

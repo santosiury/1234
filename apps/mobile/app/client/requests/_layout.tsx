@@ -1,0 +1,5 @@
+import { Stack } from "expo-router";
+export const unstable_settings = { anchor: "index" };
+export default function RequestLayout() {
+  return <Stack screenOptions={{ headerShown: false, gestureEnabled: true }} />;
+}

@@ -11,11 +11,17 @@ const routes = [
   "client/index",
   "client/search",
   "client/categories",
-  "client/requests",
+  "client/requests/_layout",
+  "client/requests/index",
+  "client/requests/[id]",
   "client/profile",
   "provider/_layout",
   "provider/index",
-  "provider/requests",
+  "provider/requests/_layout",
+  "provider/requests/index",
+  "provider/requests/[id]",
+  "service-request/new",
+  "service-request/resume",
   "provider/account",
   "provider/services/_layout",
   "provider/services/index",
@@ -48,6 +54,8 @@ for (const route of [
   "provider/services",
   "provider/profile",
   "provider/areas",
+  "provider/requests",
+  "client/requests",
 ]) {
   const source = readFileSync(new URL(`${route}/_layout.tsx`, root), "utf8");
   assert.ok(source.includes("Stack"), `Missing professional Stack: ${route}`);

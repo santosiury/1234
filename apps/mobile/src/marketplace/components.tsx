@@ -119,7 +119,7 @@ export function PublicProfessionalCard({
   );
 }
 export function CatalogNotice() {
-  return <Badge>Catálogo real · contratação indisponível</Badge>;
+  return <Badge>Catálogo real · serviços locais</Badge>;
 }
 export function NoProviders() {
   return (

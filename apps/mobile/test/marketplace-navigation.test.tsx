@@ -350,7 +350,9 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
   expect(await screen.findByText("Instalações elétricas")).toBeTruthy();
   expect(screen.getByText("Reparos residenciais.")).toBeTruthy();
   expect(screen.getByText("Centro")).toBeTruthy();
-  expect(screen.getByText("Solicitar atendimento · em breve")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Solicitar serviço" }),
+  ).toBeEnabled();
   expect(profile.services).toHaveLength(1);
   expect(profile.areas).toHaveLength(1);
   expect(

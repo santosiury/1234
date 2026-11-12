@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Switch, Text, View } from "react-native";
-import { Redirect, router } from "expo-router";
+import { requestIntent, requestAuthReturn } from "../requests/intent";
+import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { AuthApi, AuthFailure } from "./api";
 import { useSession } from "./session";
 import {
@@ -14,6 +15,7 @@ import {
 import { theme } from "../theme";
 export function AuthForm({ register = false }: { register?: boolean }) {
   const { manager, state } = useSession();
+  const intent = requestIntent(useLocalSearchParams());
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -77,11 +79,12 @@ export function AuthForm({ register = false }: { register?: boolean }) {
     return (
       <Redirect
         href={
-          state.user.profiles.client
+          requestAuthReturn({ ...intent }) ??
+          (state.user.profiles.client
             ? "/client"
             : state.user.profiles.provider
               ? "/provider"
-              : "/account"
+              : "/account")
         }
       />
     );
@@ -190,7 +193,10 @@ export function AuthForm({ register = false }: { register?: boolean }) {
         title={register ? "Já tenho conta · entrar" : "Criar uma conta"}
         onPress={() => {
           setPassword("");
-          router.replace(register ? "/login" : "/register");
+          router.replace({
+            pathname: register ? "/login" : "/register",
+            params: { ...intent },
+          });
         }}
       />
     </ScreenContainer>

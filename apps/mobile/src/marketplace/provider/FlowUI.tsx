@@ -102,6 +102,8 @@ export function FlowDialog({
   );
 }
 export type HelpTopic =
+  | "requests"
+  | "new-request"
   | "dashboard"
   | "services"
   | "profile"
@@ -110,6 +112,26 @@ export type HelpTopic =
   | "area-form"
   | "profile-form";
 const help: Record<HelpTopic, { title: string; text: string }[]> = {
+  requests: [
+    {
+      title: "Como acompanhar?",
+      text: "Abra uma solicitação para ver detalhes e histórico. A lista atualiza ao abrir a tela; você também pode tocar em Atualizar. Não há atualização em tempo real.",
+    },
+    {
+      title: "Quem confirma a conclusão?",
+      text: "O prestador informa que terminou. Só o cliente pode confirmar, ou explicar o que ainda precisa ser finalizado. Não há cancelamento após o início nesta etapa.",
+    },
+  ],
+  "new-request": [
+    {
+      title: "Antes de enviar",
+      text: "Escolha um serviço, explique o que precisa e informe cidade, UF e bairro. Não inclua endereço completo, documentos ou contatos privados. Revise antes de confirmar o envio.",
+    },
+    {
+      title: "Envio pendente",
+      text: "Se a resposta falhar, confira o envio pendente. O aplicativo usa o mesmo identificador para evitar duplicação. Nenhuma solicitação é enviada pela demonstração.",
+    },
+  ],
   dashboard: [
     {
       title: "Por onde começo?",
