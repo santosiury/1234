@@ -1,3 +1,4 @@
+import { useRequestUpdates } from "./notifications/provider";
 import { useCallback, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
@@ -189,6 +190,7 @@ function RecoverCreation({
   api: RequestsApi;
 }) {
   const { manager } = useSession();
+  const { monitor } = useRequestUpdates();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [rejected, setRejected] = useState(false);
@@ -209,6 +211,7 @@ function RecoverCreation({
       await pendingRequests.clear(owner).catch(() => undefined);
       if (manager.state.user?.id !== owner) return;
       feedback.confirm(owner, row.id);
+      void monitor?.refresh(true);
       exit.finish();
     } catch (e) {
       setError(message(e));
@@ -281,6 +284,7 @@ function CreateForm({
   context: CityLocation | null;
 }) {
   const { manager } = useSession();
+  const { monitor } = useRequestUpdates();
   const selectedInitially = person.services.some((s) => s.id === initialService)
     ? initialService!
     : "";
@@ -355,6 +359,7 @@ function CreateForm({
       await pendingRequests.clear(owner).catch(() => undefined);
       if (manager.state.user?.id !== owner) return;
       feedback.confirm(owner, row.id);
+      void monitor?.refresh(true);
       exit.finish();
     } catch (e) {
       setError(message(e));

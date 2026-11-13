@@ -1,3 +1,7 @@
+import {
+  RequestUpdatesProvider,
+  RequestNoticeHost,
+} from "../src/requests/notifications/provider";
 import { RequestFeedbackProvider } from "../src/requests/feedback";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -36,17 +40,20 @@ export default function Layout() {
           <ModeProvider>
             <RequestFeedbackProvider>
               <ProviderUxProvider>
-                <SessionGate fontsReady={fontsReady}>
-                  <StatusBar style="dark" />
-                  <Stack
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: {
-                        backgroundColor: theme.colors.background,
-                      },
-                    }}
-                  />
-                </SessionGate>
+                <RequestUpdatesProvider>
+                  <SessionGate fontsReady={fontsReady}>
+                    <RequestNoticeHost />
+                    <StatusBar style="dark" />
+                    <Stack
+                      screenOptions={{
+                        headerShown: false,
+                        contentStyle: {
+                          backgroundColor: theme.colors.background,
+                        },
+                      }}
+                    />
+                  </SessionGate>
+                </RequestUpdatesProvider>
               </ProviderUxProvider>
             </RequestFeedbackProvider>
           </ModeProvider>

@@ -122,6 +122,7 @@ export class MarketplaceHttp {
     method = "GET",
     body?: unknown,
     access?: string,
+    signal?: AbortSignal,
   ): Promise<unknown> {
     const base = this.baseUrl();
     let address: URL;
@@ -146,50 +147,67 @@ export class MarketplaceHttp {
         "Use HTTPS fora do desenvolvimento e não inclua credenciais no endereço.",
       );
     let response: Response;
+    const deadline = AbortSignal.timeout(12000),
+      linked = new AbortController();
+    const abort = () => linked.abort();
+    deadline.addEventListener("abort", abort);
+    signal?.addEventListener("abort", abort);
+    if (signal?.aborted) abort();
     try {
-      response = await fetch(`${base!.replace(/\/$/, "")}/${path}`, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          ...(access ? { Authorization: `Bearer ${access}` } : {}),
-        },
-        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        signal: AbortSignal.timeout(12000),
-      });
-    } catch {
-      throw new AuthFailure(
-        0,
-        "NETWORK",
-        this.feature === "requests"
-          ? "Não foi possível conectar às solicitações. Verifique a rede e tente novamente."
-          : "Não foi possível conectar ao catálogo. Verifique a rede e tente novamente.",
-      );
-    }
-    if (!response.ok) {
-      let code = "REQUEST_FAILED";
       try {
-        const data: unknown = await response.json();
-        if (record(data) && text(data.code)) code = data.code;
+        response = await fetch(`${base!.replace(/\/$/, "")}/${path}`, {
+          method,
+          headers: {
+            "Content-Type": "application/json",
+            ...(access ? { Authorization: `Bearer ${access}` } : {}),
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+          signal: linked.signal,
+        });
       } catch {
-        /* Never display arbitrary server text. */
+        if (signal?.aborted)
+          throw new AuthFailure(0, "ABORTED", "Consulta cancelada.");
+        throw new AuthFailure(
+          0,
+          "NETWORK",
+          this.feature === "requests"
+            ? "Não foi possível conectar às solicitações. Verifique a rede e tente novamente."
+            : "Não foi possível conectar ao catálogo. Verifique a rede e tente novamente.",
+        );
       }
-      throw new AuthFailure(
-        response.status,
-        code,
-        messages[code] ??
-          (this.feature === "requests"
-            ? "As solicitações estão temporariamente indisponíveis. Tente novamente."
-            : "O catálogo está temporariamente indisponível. Tente novamente."),
-      );
-    }
-    try {
-      return await response.json();
-    } catch {
-      throw new AuthFailure(
-        502,
-        "INVALID_RESPONSE",
-        "Resposta inesperada do catálogo.",
-      );
+      if (!response.ok) {
+        let code = "REQUEST_FAILED";
+        try {
+          const data: unknown = await response.json();
+          if (record(data) && text(data.code)) code = data.code;
+        } catch {
+          /* Never display arbitrary server text. */
+        }
+        if (signal?.aborted)
+          throw new AuthFailure(0, "ABORTED", "Consulta cancelada.");
+        throw new AuthFailure(
+          response.status,
+          code,
+          messages[code] ??
+            (this.feature === "requests"
+              ? "As solicitações estão temporariamente indisponíveis. Tente novamente."
+              : "O catálogo está temporariamente indisponível. Tente novamente."),
+        );
+      }
+      try {
+        return await response.json();
+      } catch {
+        if (signal?.aborted)
+          throw new AuthFailure(0, "ABORTED", "Consulta cancelada.");
+        throw new AuthFailure(
+          502,
+          "INVALID_RESPONSE",
+          "Resposta inesperada do catálogo.",
+        );
+      }
+    } finally {
+      deadline.removeEventListener("abort", abort);
+      signal?.removeEventListener("abort", abort);
     }
   }
 }

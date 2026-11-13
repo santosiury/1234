@@ -126,8 +126,11 @@ export class RequestsApi {
     check: (v: unknown) => v is T,
     method = "GET",
     body?: unknown,
+    signal?: AbortSignal,
   ) {
     return this.manager.request(async (access) => {
+      if (signal?.aborted)
+        throw new AuthFailure(0, "ABORTED", "Consulta cancelada.");
       if (this.manager.state.user?.id !== this.ownerId)
         throw new AuthFailure(
           403,
@@ -135,7 +138,9 @@ export class RequestsApi {
           "A conta mudou. Abra a solicitação novamente.",
         );
       return parse(
-        await http.request(`requests${path}`, method, body, access),
+        await (signal
+          ? http.request(`requests${path}`, method, body, access, signal)
+          : http.request(`requests${path}`, method, body, access)),
         check,
       );
     });
@@ -149,13 +154,20 @@ export class RequestsApi {
   detail(id: string) {
     return this.call(`/${encodeURIComponent(id)}`, isRequestDetail);
   }
-  list(side: "client" | "provider", query: RequestQuery = {}) {
+  list(
+    side: "client" | "provider",
+    query: RequestQuery = {},
+    signal?: AbortSignal,
+  ) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query))
       if (value !== undefined) params.set(key, String(value));
     return this.call(
       `/${side === "client" ? "sent" : "received"}?${params}`,
       page,
+      "GET",
+      undefined,
+      signal,
     );
   }
   history(id: string, afterVersion: number) {

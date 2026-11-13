@@ -1,4 +1,9 @@
 import {
+  RequestCount,
+  useRequestUpdates,
+} from "../../requests/notifications/provider";
+import { useMode } from "../../mode";
+import {
   Pressable,
   StyleSheet,
   Text,
@@ -24,6 +29,9 @@ type Destination = (typeof destinations)[number]["path"];
 /** A fixed sibling of the existing Stack, not a tab navigator or an overlay. */
 export function ProviderNavigation() {
   const pathname = usePathname();
+  const { state: updates } = useRequestUpdates();
+  const { catalogSource } = useMode();
+  const count = catalogSource === "real" ? updates.providerPending : null;
   const { fontScale } = useWindowDimensions();
   const largeText = fontScale >= 1.6;
   if (pathname.endsWith("/edit")) return null;
@@ -56,6 +64,13 @@ export function ProviderNavigation() {
               accessibilityRole="button"
               accessibilityLabel={item.label}
               accessibilityState={{ selected }}
+              accessibilityValue={
+                item.path === "/provider/requests" && count !== null
+                  ? {
+                      text: `${count} ${count === 1 ? "solicitação aguardando" : "solicitações aguardando"} resposta${updates.error ? ". Última atualização indisponível" : ""}`,
+                    }
+                  : undefined
+              }
               onPress={() => open(item.path)}
               style={({ pressed }) => [
                 styles.item,
@@ -64,12 +79,25 @@ export function ProviderNavigation() {
                 { opacity: pressed ? 0.7 : 1 },
               ]}
             >
-              <Ionicons
-                name={item.icon}
-                size={22}
-                color={theme.colors.ink}
-                accessible={false}
-              />
+              <View
+                style={{
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                }}
+              >
+                <Ionicons
+                  name={item.icon}
+                  size={22}
+                  color={theme.colors.ink}
+                  accessible={false}
+                />
+                {item.path === "/provider/requests" && (
+                  <RequestCount count={count} />
+                )}
+              </View>
               <Text
                 style={[
                   styles.label,

@@ -115,7 +115,7 @@ const help: Record<HelpTopic, { title: string; text: string }[]> = {
   requests: [
     {
       title: "Como acompanhar?",
-      text: "Abra uma solicitação para ver detalhes e histórico. A lista atualiza ao abrir a tela; você também pode tocar em Atualizar. Não há atualização em tempo real.",
+      text: "Abra uma solicitação para ver detalhes e histórico. O Omini atualiza os pedidos com o aplicativo aberto; você também pode tocar em Atualizar. Pode haver um pequeno intervalo até uma mudança aparecer.",
     },
     {
       title: "Quem confirma a conclusão?",

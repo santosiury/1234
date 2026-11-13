@@ -1,3 +1,5 @@
+import { useRequestUpdates } from "../../src/requests/notifications/provider";
+import { theme } from "../../src/theme";
 import { useSession } from "../../src/auth/session";
 import { Redirect } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
@@ -5,7 +7,9 @@ import { TabIcon, useTabBarOptions } from "../../src/components/TabIcon";
 import { useMode } from "../../src/mode";
 export default function Layout() {
   const tabBarOptions = useTabBarOptions();
-  const { mode } = useMode();
+  const { mode, catalogSource } = useMode();
+  const { state: updates } = useRequestUpdates();
+  const count = catalogSource === "real" ? updates.clientPending : null;
   const { state } = useSession();
   if (mode !== "client")
     return (
@@ -54,6 +58,17 @@ export default function Layout() {
         name="requests"
         options={{
           title: "Solicitações",
+          tabBarBadge:
+            count && count > 0 ? (count > 99 ? "99+" : count) : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: theme.colors.accent,
+            color: theme.colors.ink,
+            fontFamily: theme.fonts.semibold,
+          },
+          tabBarAccessibilityLabel:
+            count && count > 0
+              ? `Solicitações, ${count} aguardando sua confirmação`
+              : "Solicitações",
           tabBarIcon: ({ focused, size }) => (
             <TabIcon name="chatbubbles-outline" focused={focused} size={size} />
           ),

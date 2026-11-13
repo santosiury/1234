@@ -14,6 +14,8 @@ Correção de navegação: o prestador agora usa uma Stack com painel, seções 
 
 Barra inferior profissional e avaliações visuais: [organização, arquivos e teste no iPhone](docs/navegacao-inferior-avaliacoes-visuais.md). A Stack e os três cards aprovados são preservados; avaliações continuam sem dados ou backend. A [proposta bidirecional futura](docs/avaliacoes-bidirecionais.md) depende da Fase 2.4 concluída.
 
+Atualização de avisos internos: contador profissional de pedidos aguardando resposta, indicador de confirmação para clientes e banners discretos com o app ativo. [Arquitetura, limites, Windows/iPhone e plano futuro de push](docs/notificacoes-omini.md). Não há push remoto com o app fechado, nova dependência ou alteração de banco nesta entrega.
+
 ## Estrutura
 
 ```text

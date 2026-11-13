@@ -1,7 +1,13 @@
+import { useRequestUpdates, updateMessage } from "./notifications/provider";
 import { useRequestsApi, RequestRoleGate } from "./access";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
-import { Redirect, router, useLocalSearchParams } from "expo-router";
+import {
+  Redirect,
+  router,
+  useLocalSearchParams,
+  useFocusEffect,
+} from "expo-router";
 import { randomUUID } from "expo-crypto";
 import {
   REQUEST_STATUS_LABELS,
@@ -41,6 +47,32 @@ const errorMessage = (error: unknown) =>
   error instanceof AuthFailure
     ? error.message
     : "Não foi possível concluir. Tente novamente.";
+// A single monitor drives automatic refreshes; retained Stack screens do no extra work.
+function useMonitorRefresh(
+  reload: () => void,
+  revision: number,
+  enabled = true,
+) {
+  const focused = useRef(false),
+    handled = useRef(revision),
+    latest = useRef(revision);
+  latest.current = revision;
+  useFocusEffect(
+    useCallback(() => {
+      focused.current = true;
+      handled.current = latest.current;
+      return () => {
+        focused.current = false;
+      };
+    }, []),
+  );
+  useEffect(() => {
+    if (enabled && focused.current && handled.current !== revision) {
+      handled.current = revision;
+      reload();
+    }
+  }, [reload, revision, enabled]);
+}
 function listPath(side: RequestParticipant) {
   return side === "client" ? "/client/requests" : "/provider/requests";
 }
@@ -91,6 +123,7 @@ export function RequestListScreen({ side }: { side: RequestParticipant }) {
 }
 function RequestList({ side }: { side: RequestParticipant }) {
   const { state: session } = useSession();
+  const { monitor, state: updates } = useRequestUpdates();
   const api = useRequestsApi();
   const [page, setPage] = useState(1),
     [status, setStatus] = useState<RequestStatus>(),
@@ -101,7 +134,9 @@ function RequestList({ side }: { side: RequestParticipant }) {
       () => api.list(side, { page, pageSize: 10, status }),
       [api, side, page, status],
     ),
+    true,
   );
+  useMonitorRefresh(result.reload, updates.revision);
   return (
     <ScreenContainer>
       <ProviderHeader
@@ -114,6 +149,20 @@ function RequestList({ side }: { side: RequestParticipant }) {
           side === "provider" ? () => router.dismissTo("/provider") : undefined
         }
       />
+      {!!updateMessage(updates, side) && (
+        <Text accessibilityLiveRegion="polite" style={ui.small}>
+          {updateMessage(updates, side)}
+        </Text>
+      )}
+      {!!updates.error && (
+        <>
+          <Text style={ui.small}>{updates.error}</Text>
+          <TextButton
+            title="Atualizar avisos"
+            onPress={() => void monitor?.refresh()}
+          />
+        </>
+      )}
       {side === "client" && session.user && (
         <PendingRequestHint owner={session.user.id} />
       )}
@@ -141,9 +190,12 @@ function RequestList({ side }: { side: RequestParticipant }) {
         secondary
         title="Atualizar solicitações"
         loading={result.loading}
-        onPress={result.reload}
+        onPress={() => {
+          result.reload();
+          void monitor?.refresh();
+        }}
       />
-      <RemoteStatus {...result} />
+      <RemoteStatus {...result} loading={result.loading && !result.data} />
       {result.data && (
         <>
           {!result.data.items.length && (
@@ -276,14 +328,33 @@ export function RequestDetailScreen({ side }: { side: RequestParticipant }) {
 }
 function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
   const api = useRequestsApi();
-  const result = useRemote(useCallback(() => api.detail(id), [api, id]));
+  const { monitor, state: updates } = useRequestUpdates();
+  const { state: session } = useSession();
+  const result = useRemote(
+    useCallback(() => api.detail(id), [api, id]),
+    true,
+  );
+  useFocusEffect(
+    useCallback(() => {
+      if (result.data && session.user)
+        monitor?.viewed(result.data, session.user.id);
+    }, [monitor, result.data, session.user?.id]),
+  );
   const [history, setHistory] = useState(false);
   const [events, setEvents] = useState<RequestEventView[]>([]);
   const [historyBusy, setHistoryBusy] = useState(false),
     [historyError, setHistoryError] = useState("");
   const historyFlight = useRef(false);
   useEffect(() => {
-    setEvents(result.data?.events ?? []);
+    if (result.data)
+      setEvents((old) =>
+        [
+          ...old,
+          ...result.data!.events.filter(
+            (item) => !old.some((e) => e.id === item.id),
+          ),
+        ].sort((a, b) => a.version - b.version),
+      );
     setHistoryError("");
   }, [result.data]);
   async function moreHistory() {
@@ -314,6 +385,7 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
   const inFlight = useRef(false);
+  useMonitorRefresh(result.reload, updates.revision, !busy && !pending);
   const row = result.data;
   function open(action: RequestAction) {
     if (!row) return;
@@ -342,7 +414,9 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
         };
     setPending({ ...pending, input, submitted: true });
     try {
-      await api.act(id, pending.action, input);
+      const updated = await api.act(id, pending.action, input);
+      if (session.user) monitor?.viewed(updated, session.user.id);
+      void monitor?.refresh(true);
       setPending(null);
       setReason("");
       setMessage("Solicitação atualizada.");
@@ -370,7 +444,7 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
       />
       {!!message && <Feedback message={message} error={false} />}
       {!!error && !pending && <Feedback message={error} />}
-      <RemoteStatus {...result} />
+      <RemoteStatus {...result} loading={result.loading && !result.data} />
       {row && (
         <>
           <RequestStatusBadge status={row.status} />
@@ -463,7 +537,10 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
         secondary
         title="Atualizar solicitação"
         loading={result.loading}
-        onPress={result.reload}
+        onPress={() => {
+          result.reload();
+          void monitor?.refresh();
+        }}
       />
       <FlowDialog
         visible={!!pending}
