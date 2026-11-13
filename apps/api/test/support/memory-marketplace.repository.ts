@@ -1,3 +1,4 @@
+import { cityAreas, cityKey } from "@omini/shared";
 import { randomUUID } from "node:crypto";
 import type {
   CatalogCategory,
@@ -89,20 +90,41 @@ export class MemoryMarketplaceRepository extends MarketplaceRepository {
     return value;
   }
   async createArea(userId: string, input: CreateAreaInput) {
+    const profile = await this.own(userId);
+    if (profile.areas.some((a) => cityKey(a) === cityKey(input)))
+      throw new ApiError(409, "DUPLICATE_RECORD", "Cidade duplicada.");
     const value = {
       id: randomUUID(),
-      neighborhood: "",
-      isActive: true,
-      ...input,
+      city: input.city,
+      state: input.state,
+      isActive: input.isActive ?? true,
     };
-    (await this.own(userId)).areas.push(value);
+    profile.areas.push(value);
     return value;
   }
   async updateArea(userId: string, id: string, input: UpdateAreaInput) {
-    const value = (await this.own(userId)).areas.find((a) => a.id === id);
-    if (!value)
+    const profile = await this.own(userId),
+      current = profile.areas.find((a) => a.id === id);
+    if (!current)
       throw new ApiError(404, "NOT_FOUND", "Registro não encontrado.");
-    return Object.assign(value, input);
+    const key = cityKey(current),
+      destination = {
+        city: input.city ?? current.city,
+        state: input.state ?? current.state,
+      };
+    if (
+      key !== cityKey(destination) &&
+      profile.areas.some((a) => cityKey(a) === cityKey(destination))
+    )
+      throw new ApiError(409, "DUPLICATE_RECORD", "Cidade duplicada.");
+    const group = profile.areas.filter((a) => cityKey(a) === key);
+    for (const area of group)
+      Object.assign(
+        area,
+        destination,
+        input.isActive !== undefined ? { isActive: input.isActive } : {},
+      );
+    return cityAreas(group)[0];
   }
   publicRows() {
     return [...this.profiles.entries()]
@@ -120,7 +142,7 @@ export class MemoryMarketplaceRepository extends MarketplaceRepository {
         professionalName: p.professionalName,
         bio: p.bio,
         services: p.services.filter((s) => s.isActive && s.category.isActive),
-        areas: p.areas.filter((a) => a.isActive),
+        areas: cityAreas(p.areas).filter((a) => a.isActive),
       }));
   }
   async detail(id: string) {
@@ -142,10 +164,7 @@ export class MemoryMarketplaceRepository extends MarketplaceRepository {
           p.areas.some(
             (a) =>
               (!q.city || normal(a.city) === normal(q.city)) &&
-              (!q.state || a.state === q.state) &&
-              (!q.neighborhood ||
-                !a.neighborhood ||
-                normal(a.neighborhood) === normal(q.neighborhood)),
+              (!q.state || a.state === q.state),
           ),
       )
       .sort(

@@ -33,6 +33,7 @@ export const createRequestSchema = z
       .regex(
         /^(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)$/,
       ),
+    // Preserve the legacy normalized payload for idempotency receipts; never a coverage condition.
     neighborhood: safeText(0, 100).default(""),
     idempotencyKey: requestIdSchema,
   })

@@ -1,3 +1,4 @@
+import { cityAreas, cityKey } from "@omini/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type {
@@ -30,7 +31,6 @@ const areaSelect = {
   id: true,
   city: true,
   state: true,
-  neighborhood: true,
   isActive: true,
 } as const;
 const workspaceSelect = {
@@ -44,12 +44,7 @@ const workspaceSelect = {
   },
   serviceAreas: {
     select: areaSelect,
-    orderBy: [
-      { state: "asc" },
-      { city: "asc" },
-      { neighborhood: "asc" },
-      { id: "asc" },
-    ],
+    orderBy: [{ state: "asc" }, { city: "asc" }, { id: "asc" }],
   },
 } satisfies Prisma.ProviderProfileSelect;
 const visible = {
@@ -70,12 +65,7 @@ const publicSelect = {
   serviceAreas: {
     where: { isActive: true },
     select: areaSelect,
-    orderBy: [
-      { state: "asc" },
-      { city: "asc" },
-      { neighborhood: "asc" },
-      { id: "asc" },
-    ],
+    orderBy: [{ state: "asc" }, { city: "asc" }, { id: "asc" }],
   },
 } satisfies Prisma.ProviderProfileSelect;
 export const notFound = () =>
@@ -97,13 +87,13 @@ function workspace(
   value: Prisma.ProviderProfileGetPayload<{ select: typeof workspaceSelect }>,
 ) {
   const { serviceAreas, ...profile } = value;
-  return { ...profile, areas: serviceAreas };
+  return { ...profile, areas: cityAreas(serviceAreas) };
 }
 function publicProfile(
   value: Prisma.ProviderProfileGetPayload<{ select: typeof publicSelect }>,
 ) {
   const { serviceAreas, ...profile } = value;
-  return { ...profile, areas: serviceAreas };
+  return { ...profile, areas: cityAreas(serviceAreas) };
 }
 @Injectable()
 export class PrismaMarketplaceRepository extends MarketplaceRepository {
@@ -111,21 +101,17 @@ export class PrismaMarketplaceRepository extends MarketplaceRepository {
     super();
   }
   categories() {
-    return this.prisma
-      .orm()
-      .serviceCategory.findMany({
-        where: { isActive: true },
-        select: categorySelect,
-        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
-      });
+    return this.prisma.orm().serviceCategory.findMany({
+      where: { isActive: true },
+      select: categorySelect,
+      orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+    });
   }
   async own(userId: string) {
-    const value = await this.prisma
-      .orm()
-      .providerProfile.findFirst({
-        where: { userId, isActive: true, user: { isActive: true } },
-        select: workspaceSelect,
-      });
+    const value = await this.prisma.orm().providerProfile.findFirst({
+      where: { userId, isActive: true, user: { isActive: true } },
+      select: workspaceSelect,
+    });
     if (!value)
       throw new ApiError(
         403,
@@ -215,18 +201,34 @@ export class PrismaMarketplaceRepository extends MarketplaceRepository {
     return this.prisma.orm().$transaction(
       async (tx) => {
         const providerId = await owner(tx, userId);
-        if (
-          (await tx.providerServiceArea.count({ where: { providerId } })) >= 50
-        )
+        const rows = await tx.providerServiceArea.findMany({
+          where: { providerId },
+          select: areaSelect,
+        });
+        if (rows.some((row) => cityKey(row) === cityKey(input)))
+          throw new ApiError(
+            409,
+            "DUPLICATE_RECORD",
+            "Esta cidade já está cadastrada. Edite ou reative o cadastro existente.",
+          );
+        if (cityAreas(rows).length >= 50)
           throw new ApiError(
             409,
             "LIMIT_REACHED",
-            "O limite é de 50 áreas por prestador. Edite um cadastro existente.",
+            "O limite é de 50 cidades por prestador. Edite um cadastro existente.",
           );
-        return tx.providerServiceArea.create({
-          data: { ...input, providerId },
-          select: areaSelect,
-        });
+        return cityAreas([
+          await tx.providerServiceArea.create({
+            data: {
+              city: input.city,
+              state: input.state,
+              isActive: input.isActive,
+              neighborhood: "",
+              providerId,
+            },
+            select: areaSelect,
+          }),
+        ])[0];
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -235,29 +237,52 @@ export class PrismaMarketplaceRepository extends MarketplaceRepository {
     return this.prisma.orm().$transaction(
       async (tx) => {
         const providerId = await owner(tx, userId);
-        if (
-          !(await tx.providerServiceArea.findFirst({
-            where: { id, providerId },
-            select: { id: true },
-          }))
-        )
-          throw notFound();
-        return tx.providerServiceArea.update({
-          where: { id },
-          data: input,
+        const current = await tx.providerServiceArea.findFirst({
+          where: { id, providerId },
           select: areaSelect,
         });
+        if (!current) throw notFound();
+        const rows = await tx.providerServiceArea.findMany({
+          where: { providerId },
+          select: areaSelect,
+        });
+        const previousKey = cityKey(current),
+          destination = {
+            city: input.city ?? current.city,
+            state: input.state ?? current.state,
+          };
+        const changed = cityKey(destination) !== previousKey;
+        if (
+          changed &&
+          rows.some((row) => cityKey(row) === cityKey(destination))
+        )
+          throw new ApiError(
+            409,
+            "DUPLICATE_RECORD",
+            "Esta cidade já está cadastrada. Edite o cadastro existente.",
+          );
+        const group = rows.filter((row) => cityKey(row) === previousKey);
+        const data = {
+          ...(changed ? destination : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        };
+        // Operate on the municipality, preserving every legacy row and its district value.
+        // Equal logical names need no physical rename (avoids collisions between legacy aliases).
+        if (Object.keys(data).length)
+          await tx.providerServiceArea.updateMany({
+            where: { providerId, id: { in: group.map((row) => row.id) } },
+            data,
+          });
+        return cityAreas(group.map((row) => ({ ...row, ...data })))[0];
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
   }
   async detail(id: string) {
-    const profile = await this.prisma
-      .orm()
-      .providerProfile.findFirst({
-        where: { ...visible, id },
-        select: publicSelect,
-      });
+    const profile = await this.prisma.orm().providerProfile.findFirst({
+      where: { ...visible, id },
+      select: publicSelect,
+    });
     return profile ? publicProfile(profile) : null;
   }
   async list(query: ParsedCatalogQuery) {

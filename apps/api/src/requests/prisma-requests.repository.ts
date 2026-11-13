@@ -54,7 +54,7 @@ export class PrismaRequestsRepository extends RequestsRepository {
             if (!service) return null;
             const areas = await db.$queryRaw<
               { id: string }[]
-            >`SELECT TOP (1) [id] FROM [dbo].[ProviderServiceArea] WHERE [providerId]=${input.providerId} AND [isActive]=1 AND [city] COLLATE Latin1_General_100_CI_AI=${input.city} AND [state]=${input.state} AND ([neighborhood]=N'' OR [neighborhood] COLLATE Latin1_General_100_CI_AI=${input.neighborhood})`;
+            >`SELECT TOP (1) [id] FROM [dbo].[ProviderServiceArea] WHERE [providerId]=${input.providerId} AND [isActive]=1 AND [city] COLLATE Latin1_General_100_CI_AI=${input.city} AND [state] COLLATE Latin1_General_100_CI_AI=${input.state}`;
             return areas.length
               ? {
                   providerUserId: service.provider.userId,

@@ -205,7 +205,7 @@ test("areas can be edited and deactivated; an inactive area cannot keep a profes
         await f.call(
           `provider/me/areas/${item.area.id}`,
           "PATCH",
-          { neighborhood: "Coloninha" },
+          { city: "Sombrio" },
           item.tokens,
         )
       ).status,
@@ -216,8 +216,8 @@ test("areas can be edited and deactivated; an inactive area cannot keep a profes
         await (
           await f.call("provider/me/areas", "GET", undefined, item.tokens)
         ).json()
-      )[0].neighborhood,
-      "Coloninha",
+      )[0].city,
+      "Sombrio",
     );
     assert.equal(
       (
@@ -343,7 +343,7 @@ test("public search combines category, accent/case insensitive name and the same
           )
         ).json()
       ).total,
-      0,
+      1,
     );
     await f.call(
       "provider/me/areas",
@@ -515,6 +515,97 @@ test("catalog rate limiting bounds repeated public requests without requiring au
     assert.equal(limited.status, 429);
     assert.equal((await limited.json()).code, "TOO_MANY_ATTEMPTS");
     assert.equal(limited.headers.get("retry-after"), "60");
+  } finally {
+    await f.app.close();
+  }
+});
+
+test("public and own catalogs collapse legacy districts with any-active semantics, and toggles cover the full municipality", async () => {
+  const f = await fixture();
+  try {
+    const item = await f.complete(),
+      raw = f.repo.profiles.get(item.tokens.user.id)!;
+    raw.areas[0].neighborhood = "Centro";
+    raw.areas[0].isActive = false;
+    raw.areas.push({
+      ...raw.areas[0],
+      id: randomUUID(),
+      neighborhood: "Polícia rodoviária",
+      isActive: true,
+    });
+    const own = await (
+      await f.call("provider/me", "GET", undefined, item.tokens)
+    ).json();
+    assert.equal(own.areas.length, 1);
+    assert.equal(own.areas[0].isActive, true);
+    assert.ok(!("neighborhood" in own.areas[0]));
+    const catalog = await (
+      await f.call(
+        "catalog/providers?city=ararangua&state=sc&neighborhood=Qualquer",
+      )
+    ).json();
+    assert.equal(catalog.total, 1);
+    assert.equal(catalog.items.length, 1);
+    assert.equal(catalog.items[0].areas.length, 1);
+    assert.ok(!("neighborhood" in catalog.items[0].areas[0]));
+    assert.equal(
+      (
+        await f.call(
+          "provider/me/areas",
+          "POST",
+          { city: "ARARANGUA", state: "SC" },
+          item.tokens,
+        )
+      ).status,
+      409,
+    );
+    assert.equal(
+      (
+        await f.call(
+          "provider/me/areas",
+          "POST",
+          { city: "Criciúma", state: "SC" },
+          item.tokens,
+        )
+      ).status,
+      201,
+    );
+    const path = `provider/me/areas/${own.areas[0].id}`;
+    assert.equal(
+      (await f.call(path, "PATCH", { isActive: false }, item.tokens)).status,
+      200,
+    );
+    assert.equal(
+      (
+        await (
+          await f.call("catalog/providers?city=Ararangu%C3%A1&state=SC")
+        ).json()
+      ).total,
+      0,
+    );
+    assert.equal(
+      (
+        await (
+          await f.call("catalog/providers?city=Crici%C3%BAma&state=SC")
+        ).json()
+      ).total,
+      1,
+    );
+    assert.equal(
+      (await f.call(path, "PATCH", { isActive: true }, item.tokens)).status,
+      200,
+    );
+    assert.equal(
+      (
+        await (
+          await f.call("catalog/providers?city=Ararangu%C3%A1&state=SC")
+        ).json()
+      ).total,
+      1,
+    );
+    assert.equal(raw.areas.length, 3);
+    assert.equal(raw.areas[0].neighborhood, "Centro");
+    assert.equal(raw.areas[1].neighborhood, "Polícia rodoviária");
   } finally {
     await f.app.close();
   }

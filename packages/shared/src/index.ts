@@ -1,3 +1,4 @@
+export * from "./location";
 export type ExperienceMode = "client" | "provider";
 export interface HealthResponse {
   status: "ok";
@@ -57,7 +58,8 @@ export interface ProviderAreaRecord {
   id: string;
   city: string;
   state: string;
-  neighborhood: string; // Empty means the entire city.
+  /** @deprecated Read compatibility only. Never use for coverage or display. */
+  neighborhood?: string;
   isActive: boolean;
 }
 export interface ProviderWorkspace {
@@ -80,6 +82,7 @@ export interface CatalogQuery {
   categoryId?: string;
   city?: string;
   state?: string;
+  /** @deprecated Accepted only for older clients; ignored by coverage. */
   neighborhood?: string;
   page?: number;
   pageSize?: number;
@@ -104,6 +107,7 @@ export type UpdateServiceInput = Partial<CreateServiceInput>;
 export interface CreateAreaInput {
   city: string;
   state: string;
+  /** @deprecated Accepted only for older clients; ignored by coverage. */
   neighborhood?: string;
   isActive?: boolean;
 }
@@ -188,7 +192,8 @@ export interface CreateRequestInput {
   description: string;
   city: string;
   state: string;
-  neighborhood: string;
+  /** @deprecated Preserve verbatim only when recovering old idempotent payloads. */
+  neighborhood?: string;
   idempotencyKey: string;
 }
 export interface RequestActionInput {

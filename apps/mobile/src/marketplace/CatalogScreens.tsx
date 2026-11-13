@@ -1,3 +1,4 @@
+import { cityLocation, type CityLocation } from "@omini/shared";
 import { ReviewsSection } from "../components/ReviewsSection";
 import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
@@ -79,6 +80,7 @@ export function CatalogHome() {
               <PublicProfessionalCard
                 key={professional.id}
                 professional={professional}
+                location={{ city: "Araranguá", state: "SC" }}
               />
             ))}
             {!result.data.providers.items.length && <NoProviders />}
@@ -119,13 +121,11 @@ export function CatalogSearch() {
   const [q, setQ] = useState("");
   const [city, setCity] = useState("Araranguá");
   const [state, setState] = useState("SC");
-  const [neighborhood, setNeighborhood] = useState("");
   const [filters, setFilters] = useState(false);
   const [applied, setApplied] = useState({
     q: "",
     city: "Araranguá",
     state: "SC",
-    neighborhood: "",
   });
   const [page, setPage] = useState(1);
   useEffect(() => {
@@ -182,14 +182,6 @@ export function CatalogSearch() {
             maxLength={2}
             autoCapitalize="characters"
           />
-          <OminiInput
-            label="Bairro"
-            accessibilityLabel="Filtrar bairro"
-            value={neighborhood}
-            onChangeText={setNeighborhood}
-            maxLength={100}
-            hint="Em branco: qualquer bairro. Áreas de toda a cidade também são consideradas."
-          />
         </View>
       )}
       {!!params.category && (
@@ -208,7 +200,6 @@ export function CatalogSearch() {
             q: q.trim(),
             city: city.trim(),
             state: state.trim(),
-            neighborhood: neighborhood.trim(),
           });
         }}
       />
@@ -222,6 +213,7 @@ export function CatalogSearch() {
             <PublicProfessionalCard
               key={professional.id}
               professional={professional}
+              location={cityLocation(applied)}
             />
           ))}
           {!result.data.items.length && <NoProviders />}
@@ -246,11 +238,25 @@ export function CatalogSearch() {
   );
 }
 export function CatalogDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, city, state } = useLocalSearchParams<{
+    id: string;
+    city?: string;
+    state?: string;
+  }>();
   const { mode } = useMode();
-  return mode === "client" ? <LoadedDetail id={id} /> : <Redirect href="/" />;
+  return mode === "client" ? (
+    <LoadedDetail id={id} location={cityLocation({ city, state })} />
+  ) : (
+    <Redirect href="/" />
+  );
 }
-function LoadedDetail({ id }: { id: string }) {
+function LoadedDetail({
+  id,
+  location,
+}: {
+  id: string;
+  location: CityLocation | null;
+}) {
   const result = useRemote(useCallback(() => api.provider(id), [id]));
   const person = result.data;
   return (
@@ -292,9 +298,7 @@ function LoadedDetail({ id }: { id: string }) {
               <Text style={ui.section}>
                 {area.city}/{area.state}
               </Text>
-              <Text style={ui.text}>
-                {area.neighborhood || "Toda a cidade"}
-              </Text>
+              <Text style={ui.text}>Atendimento em toda a cidade</Text>
             </View>
           ))}
           <PrimaryButton
@@ -302,7 +306,7 @@ function LoadedDetail({ id }: { id: string }) {
             onPress={() =>
               router.navigate({
                 pathname: "/service-request/new",
-                params: { providerId: person.id },
+                params: { providerId: person.id, ...(location ?? {}) },
               })
             }
           />

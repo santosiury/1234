@@ -68,7 +68,6 @@ export function RequestCard({
       )}
       <Text style={ui.small}>
         {row.city}/{row.state}
-        {row.neighborhood ? ` · ${row.neighborhood}` : ""}
       </Text>
       <Text style={ui.small}>{requestDate(row.createdAt)}</Text>
     </Pressable>

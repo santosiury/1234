@@ -2,7 +2,7 @@
 
 Marketplace mobile de serviços para Araranguá, SC. Cliente solicita um serviço do catálogo real; prestador aceita, inicia e informa a conclusão; cliente confirma ou reabre com motivo. Sessão segura e experiências de cliente/prestador preservadas. Sem pagamentos, chat ou avaliações funcionais.
 
-**Banco ainda pendente de revisão/aplicação:** esta entrega contém duas tabelas novas e GRANT incremental, sem executar SQL, migration ou seed no banco existente. A fase depende de implantação revisada e teste físico no iPhone. Siga [arquitetura, SQL completo, Windows e roteiro físico da Fase 2.4](docs/fase-2-4-solicitacoes.md).
+**Atualização: cobertura por cidade e UF.** O responsável informou que a migration e as permissões da Fase 2.4 já foram aplicadas. A correção atual remove bairro como cobertura/filtro e elimina a repetição de localização na contratação; não requer migration nem GRANT. Siga [compatibilidade legada, atualização no Windows e roteiro no iPhone](docs/cobertura-cidade-uf.md). O [guia original da Fase 2.4](docs/fase-2-4-solicitacoes.md) contém a arquitetura e o SQL histórico; as regras de bairro foram substituídas pelo novo guia.
 
 Guia histórico da base já validada: [Fase 2.3 — prestadores e catálogo](docs/fase-2-3-prestadores.md). As notas de “sem migration” abaixo referem-se somente às respectivas entregas históricas.
 
@@ -42,7 +42,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.4 — atualização, revisão da migration e teste no iPhone](docs/fase-2-4-solicitacoes.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [cobertura cidade/UF — atualização e teste no iPhone](docs/cobertura-cidade-uf.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 
@@ -80,7 +80,7 @@ EXPO_PUBLIC_API_URL=http://192.168.1.100:3000/api
 npm run dev:mobile
 ```
 
-Atualize o **Expo Go da App Store com suporte ao SDK 58**. Abra a Câmera do iPhone, escaneie o QR e escolha abrir no Expo Go. Permita acesso à rede local em Ajustes → Apps → Expo Go → Rede Local. O iPhone e o Windows precisam estar na mesma rede Wi-Fi. A base da Fase 2.3 foi validada no iPhone pelo responsável; o fluxo de solicitações da Fase 2.4 ainda precisa de implantação revisada no banco e validação física conforme o novo roteiro. Não use o comando de web para substituir o aplicativo nativo.
+Atualize o **Expo Go da App Store com suporte ao SDK 58**. Abra a Câmera do iPhone, escaneie o QR e escolha abrir no Expo Go. Permita acesso à rede local em Ajustes → Apps → Expo Go → Rede Local. O iPhone e o Windows precisam estar na mesma rede Wi-Fi. A base da Fase 2.3 foi validada no iPhone pelo responsável; a correção atual de cobertura municipal precisa de validação física conforme o novo roteiro, sem nova implantação de estruturas no banco. Não use o comando de web para substituir o aplicativo nativo.
 
 Reinicie o Expo com cache limpo após mudar variáveis:
 
@@ -138,4 +138,4 @@ Persistência opcional: consulte [Fase 2.1 — configuração, permissões e mig
 
 ## Limites e segurança
 
-Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. As migrations históricas de fundação/autenticação foram preservadas; a nova migration da Fase 2.4 adiciona solicitações e histórico e aguarda aplicação revisada. Não há credenciais reais no repositório. A API implementa autenticação, catálogo e solicitações autorizadas, com rate limiting por processo. Antes de implantação, valide SQL/iPhone e configure HTTPS; múltiplas instâncias exigem limite compartilhado. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).
+Nenhuma variável `EXPO_PUBLIC_*` deve conter segredos: seu valor é embutido no app. `.env` e saídas de build estão ignorados. Somente os templates são versionados. As migrations históricas de fundação/autenticação foram preservadas; a migration da Fase 2.4 adiciona solicitações e histórico e, segundo o responsável, já foi aplicada no banco real. A correção de cobertura municipal não altera essas estruturas. Não há credenciais reais no repositório. A API implementa autenticação, catálogo e solicitações autorizadas, com rate limiting por processo. Antes de implantação, valide SQL/iPhone e configure HTTPS; múltiplas instâncias exigem limite compartilhado. Veja [arquitetura](docs/architecture.md) e [validação](docs/validation.md). A validação da atualização está em [SDK 58](docs/expo-sdk-58.md).

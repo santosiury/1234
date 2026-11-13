@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { Test } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
 import type {
@@ -238,8 +238,6 @@ test("target validation checks service ownership, category, provider account/pro
       { providerId: randomUUID() },
       { providerServiceId: randomUUID() },
       { city: "Criciúma" },
-      { neighborhood: "Outro bairro" },
-      { neighborhood: "" },
     ])
       assert.equal(
         (await f.call("requests", "POST", f.input(extra), f.client)).status,
@@ -267,7 +265,7 @@ test("target validation checks service ownership, category, provider account/pro
       400,
     );
     account.active = true;
-    f.area.neighborhood = "";
+    f.workspace.areas[0].neighborhood = "Centro";
     const valid = await f.create({
       city: "ararangua",
       neighborhood: "Qualquer bairro",
@@ -628,6 +626,95 @@ test("long immutable history is bounded, ordered and participant-only across ver
         )
       ).status,
       400,
+    );
+  } finally {
+    await f.app.close();
+  }
+});
+
+test("a legacy Centro service area covers every district of the same city, without collecting district for new requests", async () => {
+  const f = await fixture();
+  try {
+    f.workspace.areas[0].neighborhood = "Centro";
+    f.workspace.areas.push({
+      ...f.workspace.areas[0],
+      id: randomUUID(),
+      neighborhood: "Polícia rodoviária",
+      isActive: false,
+    });
+    const row = await f.create({ neighborhood: undefined, city: "ARARANGUA" });
+    assert.equal(row.status, "REQUESTED");
+    assert.equal(row.neighborhood, "");
+    assert.equal(f.repo.rows.get(row.id)?.neighborhood, "");
+    const legacyCaller = await f.create({ neighborhood: "Polícia rodoviária" });
+    assert.equal(legacyCaller.neighborhood, "");
+    assert.equal(
+      (
+        await f.call(
+          "requests",
+          "POST",
+          f.input({ city: "Sombrio", neighborhood: undefined }),
+          f.client,
+        )
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await f.call(
+          "requests",
+          "POST",
+          f.input({ state: "RS", neighborhood: undefined }),
+          f.client,
+        )
+      ).status,
+      400,
+    );
+  } finally {
+    await f.app.close();
+  }
+});
+test("legacy receipts and request snapshots retain district and payload hash across recovery without duplicate creation", async () => {
+  const f = await fixture();
+  try {
+    const input = f.input({ neighborhood: "Centro" });
+    const original = (await (
+      await f.call("requests", "POST", input, f.client)
+    ).json()) as ServiceRequestDetail;
+    // Simulate the stored snapshot from the previous deployed version; preserve its original receipt.
+    f.repo.rows.get(original.id)!.neighborhood = "Centro";
+    const { idempotencyKey: _key, ...legacyContent } = input;
+    // Receipt algorithm and normalized property order from 74d4a6e, not a re-hash migration.
+    const hash = createHash("sha256")
+      .update(JSON.stringify({ action: "create", ...legacyContent }))
+      .digest("hex");
+    assert.equal(_key, input.idempotencyKey);
+    f.repo.history[0].payloadHash = hash;
+    const replay = await f.call("requests", "POST", input, f.client);
+    assert.equal(replay.status, 201);
+    const recovered = await replay.json();
+    assert.equal(recovered.id, original.id);
+    assert.equal(recovered.neighborhood, "Centro");
+    assert.equal(f.repo.history[0].payloadHash, hash);
+    assert.equal(f.repo.history.length, 1);
+    assert.equal(f.repo.rows.size, 1);
+    const byKey = await f.call(
+      `requests/by-key/${input.idempotencyKey}`,
+      "GET",
+      undefined,
+      f.client,
+    );
+    assert.equal((await byKey.json()).id, original.id);
+    assert.equal(
+      (
+        await f.call(
+          "requests",
+          "POST",
+          { ...input, neighborhood: "" },
+          f.client,
+        )
+      ).status,
+      409,
     );
   } finally {
     await f.app.close();

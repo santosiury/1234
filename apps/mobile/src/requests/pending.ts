@@ -58,9 +58,10 @@ function validInput(v: unknown): v is CreateRequestInput {
     !hasPrivateRequestData(p.city) &&
     typeof p.state === "string" &&
     /^[A-Z]{2}$/.test(p.state) &&
-    typeof p.neighborhood === "string" &&
-    p.neighborhood.length <= 100 &&
-    !hasPrivateRequestData(p.neighborhood)
+    (p.neighborhood === undefined ||
+      (typeof p.neighborhood === "string" &&
+        p.neighborhood.length <= 100 &&
+        !hasPrivateRequestData(p.neighborhood)))
   );
 }
 const tails = new Map<string, Promise<unknown>>();

@@ -61,9 +61,7 @@ export class MemoryRequestsRepository extends RequestsRepository {
             (a) =>
               a.isActive &&
               normal(a.city) === normal(input.city) &&
-              a.state === input.state &&
-              (!a.neighborhood ||
-                normal(a.neighborhood) === normal(input.neighborhood)),
+              a.state === input.state,
           );
           return s && area
             ? {

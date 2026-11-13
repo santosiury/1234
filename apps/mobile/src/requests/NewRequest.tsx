@@ -4,6 +4,10 @@ import { Redirect, router, useLocalSearchParams } from "expo-router";
 import { randomUUID } from "expo-crypto";
 import {
   hasPrivateRequestData,
+  cityLocation,
+  cityAreas,
+  cityKey,
+  type CityLocation,
   type CreateRequestInput,
   type PublicProvider,
 } from "@omini/shared";
@@ -37,10 +41,18 @@ const message = (error: unknown) =>
       ? error.message
       : "Não foi possível concluir. Tente novamente.";
 export function NewRequestScreen() {
-  const { providerId, serviceId } = useLocalSearchParams<{
+  const {
+    providerId,
+    serviceId,
+    city,
+    state: locationState,
+  } = useLocalSearchParams<{
     providerId: string;
     serviceId?: string;
+    city?: string;
+    state?: string;
   }>();
+  const location = cityLocation({ city, state: locationState });
   const { state } = useSession();
   const { mode, catalogSource, setMode, setCatalogSource } = useMode();
   if (!isRequestId(providerId))
@@ -61,6 +73,9 @@ export function NewRequestScreen() {
           pathname: "/login",
           params: {
             requestProvider: providerId,
+            ...(location
+              ? { requestCity: location.city, requestState: location.state }
+              : {}),
             ...(isRequestId(serviceId) ? { requestService: serviceId } : {}),
           },
         }}
@@ -86,10 +101,11 @@ export function NewRequestScreen() {
     );
   return (
     <RequestLoader
-      key={`${state.user.id}:${providerId}`}
+      key={`${state.user.id}:${providerId}:${location ? cityKey(location) : ""}`}
       owner={state.user.id}
       providerId={providerId}
       serviceId={serviceId}
+      location={location}
     />
   );
 }
@@ -97,10 +113,12 @@ function RequestLoader({
   owner,
   providerId,
   serviceId,
+  location,
 }: {
   owner: string;
   providerId: string;
   serviceId?: string;
+  location: CityLocation | null;
 }) {
   const api = useRequestsApi();
   const result = useRemote(
@@ -126,6 +144,7 @@ function RequestLoader({
       owner={owner}
       api={api}
       initialService={serviceId}
+      context={location}
     />
   ) : null;
 }
@@ -220,7 +239,6 @@ function RecoverCreation({
         <Text style={ui.text}>{pending.input.description}</Text>
         <Text style={ui.small}>
           {pending.input.city}/{pending.input.state}
-          {pending.input.neighborhood ? ` · ${pending.input.neighborhood}` : ""}
         </Text>
       </View>
       {!!error && <Feedback message={error} />}
@@ -254,21 +272,31 @@ function CreateForm({
   owner,
   api,
   initialService,
+  context,
 }: {
   person: PublicProvider;
   owner: string;
   api: RequestsApi;
   initialService?: string;
+  context: CityLocation | null;
 }) {
   const { manager } = useSession();
   const selectedInitially = person.services.some((s) => s.id === initialService)
     ? initialService!
     : "";
+  const cities = cityAreas(person.areas).filter((a) => a.isActive);
+  const contextual = context
+    ? cities.find((a) => cityKey(a) === cityKey(context))
+    : undefined;
+  const initialCity = contextual
+    ? cityKey(contextual)
+    : !context && cities.length === 1
+      ? cityKey(cities[0])
+      : "";
+  const [selectedCity, setSelectedCity] = useState(initialCity);
+  const location = cities.find((a) => cityKey(a) === selectedCity);
   const [service, setService] = useState(selectedInitially),
-    [description, setDescription] = useState(""),
-    [city, setCity] = useState("Araranguá"),
-    [state, setState] = useState("SC"),
-    [neighborhood, setNeighborhood] = useState("");
+    [description, setDescription] = useState("");
   const [review, setReview] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -278,14 +306,12 @@ function CreateForm({
   const dirty =
     description !== "" ||
     service !== selectedInitially ||
-    city !== "Araranguá" ||
-    state !== "SC" ||
-    neighborhood !== "";
+    selectedCity !== initialCity;
   const exit = useFormExit(dirty, busy, "/client/requests");
   function prepare() {
-    if ([description, city, neighborhood].some(hasPrivateRequestData)) {
+    if (hasPrivateRequestData(description)) {
       setError(
-        "Não informe endereço completo, documentos, telefone ou e-mail. Use somente cidade, UF e bairro.",
+        "Não informe endereço completo, documentos, telefone ou e-mail. Informe somente o trabalho necessário.",
       );
       return;
     }
@@ -295,13 +321,10 @@ function CreateForm({
       ) ||
       description.trim().length < 10 ||
       description.trim().length > 1000 ||
-      city.trim().length < 2 ||
-      city.trim().length > 100 ||
-      !/^[A-Z]{2}$/.test(state.trim()) ||
-      neighborhood.length > 100
+      !location
     ) {
       setError(
-        "Escolha o serviço, descreva o que precisa em 10 a 1000 caracteres e confira cidade/UF.",
+        "Escolha o serviço e uma cidade atendida, e descreva o que precisa em 10 a 1000 caracteres.",
       );
       return;
     }
@@ -309,7 +332,7 @@ function CreateForm({
     setReview(true);
   }
   async function send() {
-    if (lock.current) return;
+    if (lock.current || !location) return;
     lock.current = true;
     setBusy(true);
     setError("");
@@ -318,9 +341,8 @@ function CreateForm({
         providerId: person.id,
         providerServiceId: service,
         description: description.trim(),
-        city: city.trim(),
-        state: state.trim(),
-        neighborhood: neighborhood.trim(),
+        city: location.city,
+        state: location.state,
         idempotencyKey: randomUUID(),
       };
       prepared.current = { input };
@@ -364,16 +386,65 @@ function CreateForm({
         }}
       />
       <Text style={ui.section}>{person.professionalName}</Text>
+      {!review && (
+        <>
+          {location && (
+            <Text style={ui.text}>
+              Atendimento em {location.city}, {location.state}
+            </Text>
+          )}
+          {context && !contextual && (
+            <Feedback message="A cidade da busca não está entre as cidades atendidas. Escolha uma opção disponível antes de continuar." />
+          )}
+          {!contextual && cities.length > (context ? 0 : 1) && (
+            <View
+              style={ui.group}
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Cidade de atendimento"
+            >
+              <Text style={ui.section}>Em qual cidade será o atendimento?</Text>
+              {cities.map((item) => (
+                <Pressable
+                  key={cityKey(item)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${item.city}, ${item.state}`}
+                  accessibilityState={{
+                    checked: selectedCity === cityKey(item),
+                  }}
+                  onPress={() => setSelectedCity(cityKey(item))}
+                  style={[
+                    ui.card,
+                    {
+                      minHeight: 48,
+                      backgroundColor:
+                        selectedCity === cityKey(item)
+                          ? theme.colors.pale
+                          : theme.colors.surface,
+                    },
+                  ]}
+                >
+                  <Text style={ui.text}>
+                    {item.city}, {item.state}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+          {!cities.length && (
+            <EmptyState
+              title="Nenhuma cidade disponível"
+              description="Confira o catálogo e escolha um profissional com atendimento ativo."
+            />
+          )}
+        </>
+      )}
       {review ? (
         <>
           <View style={ui.card}>
             <Text style={ui.section}>{selected?.title}</Text>
             <Text style={ui.text}>{description.trim()}</Text>
             <Text style={ui.text}>
-              {city.trim()}/{state.trim()}
-              {neighborhood.trim()
-                ? ` · ${neighborhood.trim()}`
-                : " · Toda a cidade"}
+              Atendimento em {location?.city}, {location?.state}
             </Text>
           </View>
           <Text style={ui.small}>
@@ -431,29 +502,6 @@ function CreateForm({
             maxLength={1000}
             value={description}
             onChangeText={setDescription}
-          />
-          <OminiInput
-            label="Cidade"
-            accessibilityLabel="Cidade do atendimento"
-            value={city}
-            onChangeText={setCity}
-            maxLength={100}
-          />
-          <OminiInput
-            label="Estado (UF)"
-            accessibilityLabel="Estado do atendimento"
-            value={state}
-            onChangeText={(v) => setState(v.toUpperCase())}
-            autoCapitalize="characters"
-            maxLength={2}
-          />
-          <OminiInput
-            label="Bairro"
-            accessibilityLabel="Bairro do atendimento"
-            hint="Informe o bairro atendido. Não informe rua, número ou complemento."
-            value={neighborhood}
-            onChangeText={setNeighborhood}
-            maxLength={100}
           />
           <PrimaryButton title="Revisar solicitação" onPress={prepare} />
         </>

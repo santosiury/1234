@@ -125,7 +125,7 @@ const help: Record<HelpTopic, { title: string; text: string }[]> = {
   "new-request": [
     {
       title: "Antes de enviar",
-      text: "Escolha um serviço, explique o que precisa e informe cidade, UF e bairro. Não inclua endereço completo, documentos ou contatos privados. Revise antes de confirmar o envio.",
+      text: "Escolha um serviço, explique o que precisa e confira a cidade de atendimento. Se houver mais de uma cidade e nenhum contexto de busca, escolha uma das opções atendidas. Não inclua endereço completo, documentos ou contatos privados. Revise antes de confirmar o envio.",
     },
     {
       title: "Envio pendente",
@@ -167,17 +167,17 @@ const help: Record<HelpTopic, { title: string; text: string }[]> = {
     },
     {
       title: "Onde atendo",
-      text: "Informe cidades e bairros na área de atendimento. Nome, e-mail e saída da conta ficam em Minha conta.",
+      text: "Informe cidades e UFs na área de atendimento. Nome, e-mail e saída da conta ficam em Minha conta.",
     },
   ],
   areas: [
     {
       title: "Como informar onde atendo?",
-      text: 'Toque em "Adicionar área". Informe a cidade, a sigla do estado e, se quiser, o bairro.',
+      text: 'Toque em "Adicionar área". Informe a cidade e a sigla do estado.',
     },
     {
       title: "Atendo toda a cidade",
-      text: "Se você atende toda a cidade, deixe o bairro em branco.",
+      text: "Cada cidade cadastrada inclui atendimento em todo o município.",
     },
     {
       title: "Como alterar uma área?",
@@ -204,8 +204,8 @@ const help: Record<HelpTopic, { title: string; text: string }[]> = {
       text: "Informe a cidade e a sigla do estado. Por exemplo: Araranguá e SC.",
     },
     {
-      title: "Bairro opcional",
-      text: "Se você atende toda a cidade, deixe o bairro em branco. Você pode adicionar outros locais depois.",
+      title: "Cobertura municipal",
+      text: "Cada cidade cadastrada inclui atendimento em todo o município. Você pode adicionar outros locais depois.",
     },
   ],
   "profile-form": [

@@ -21,6 +21,7 @@ import { AuthApi, AuthFailure } from "../src/auth/api";
 import { MarketplaceHttp } from "../src/marketplace/api";
 import { FakeAuthApi } from "./support/auth-fakes";
 import { routes } from "./support/routes";
+import { pendingRequests } from "../src/requests/pending";
 const clientId = "10000000-0000-4000-8000-000000000001",
   providerUserId = "10000000-0000-4000-8000-000000000002";
 const category = {
@@ -71,7 +72,9 @@ function viewed(row: ServiceRequestDetail) {
     allowedActions: allowedRequestActions(row.status, viewer),
   };
 }
+const originalAreas = clone(person.areas);
 beforeEach(() => {
+  person.areas = clone(originalAreas);
   auth = new FakeAuthApi();
   storage = new Map();
   rows = [];
@@ -147,7 +150,7 @@ beforeEach(() => {
           description: input.description,
           city: input.city,
           state: input.state,
-          neighborhood: input.neighborhood,
+          neighborhood: "",
           status: "REQUESTED",
           version: 1,
           createdAt: now,
@@ -272,10 +275,9 @@ async function fillAndReview() {
     screen.getByLabelText("Descrição do atendimento"),
     "Preciso instalar duas tomadas na sala.",
   );
-  await fireEvent.changeText(
-    screen.getByLabelText("Bairro do atendimento"),
-    "Centro",
-  );
+  expect(screen.queryByLabelText("Bairro do atendimento")).toBeNull();
+  expect(screen.queryByLabelText("Cidade do atendimento")).toBeNull();
+  expect(screen.queryByLabelText("Estado do atendimento")).toBeNull();
   await fireEvent.press(screen.getByText("Revisar solicitação"));
   await screen.findByRole("header", { name: "Revise sua solicitação" });
 }
@@ -481,4 +483,145 @@ test("status filters, refresh and request detail native back keep professional f
   await act(async () => router.back());
   await screen.findByRole("header", { name: "Meu espaço profissional" });
   expect(screen).toHavePathname("/provider");
+});
+
+test("search context in a different municipality reaches review and POST without collecting city, UF or district again", async () => {
+  person.areas.push({
+    ...person.areas[0],
+    id: randomUUID(),
+    city: "Criciúma",
+    neighborhood: "Próspera",
+  });
+  await clientEntry();
+  await testRouter.push("/client/search");
+  await fireEvent.press(await screen.findByText("Filtrar por localidade"));
+  await fireEvent.changeText(
+    screen.getByLabelText("Filtrar cidade"),
+    "Criciúma",
+  );
+  await fireEvent.press(screen.getByText("Pesquisar profissionais"));
+  expect(screen.queryByLabelText("Filtrar bairro")).toBeNull();
+  await openForm();
+  expect(screen.getByText("Atendimento em Criciúma, SC")).toBeTruthy();
+  expect(
+    screen.queryByRole("radiogroup", { name: "Cidade de atendimento" }),
+  ).toBeNull();
+  await send();
+  expect(createCalls[0]).toMatchObject({ city: "Criciúma", state: "SC" });
+  expect(createCalls[0]).not.toHaveProperty("neighborhood");
+});
+test("missing search context presents only deduplicated active served cities and never defaults universally to Araranguá", async () => {
+  person.areas = [
+    { ...person.areas[0], city: "Criciúma", neighborhood: "Próspera" },
+    {
+      ...person.areas[0],
+      id: "50000000-0000-4000-8000-000000000002",
+      city: "CRICIUMA",
+      neighborhood: "Centro",
+      isActive: false,
+    },
+    {
+      ...person.areas[0],
+      id: "50000000-0000-4000-8000-000000000003",
+      city: "Sombrio",
+    },
+  ];
+  await clientEntry();
+  await act(async () =>
+    router.push({
+      pathname: "/service-request/new",
+      params: { providerId: person.id },
+    }),
+  );
+  await screen.findByRole("radio", { name: "Criciúma, SC" });
+  expect(
+    screen
+      .getAllByRole("radio")
+      .filter((r) => r.props.accessibilityLabel?.includes(", SC")),
+  ).toHaveLength(2);
+  await fireEvent.press(
+    screen.getByRole("radio", { name: "Instalação de tomadas" }),
+  );
+  await fireEvent.changeText(
+    screen.getByLabelText("Descrição do atendimento"),
+    "Preciso instalar duas tomadas na sala.",
+  );
+  await fireEvent.press(screen.getByText("Revisar solicitação"));
+  expect(
+    screen.getByText(
+      "Escolha o serviço e uma cidade atendida, e descreva o que precisa em 10 a 1000 caracteres.",
+    ),
+  ).toBeTruthy();
+  expect(createCalls).toHaveLength(0);
+  await fireEvent.press(screen.getByRole("radio", { name: "Sombrio, SC" }));
+  await fireEvent.press(screen.getByText("Revisar solicitação"));
+  expect(await screen.findByText("Atendimento em Sombrio, SC")).toBeTruthy();
+  await fireEvent.press(screen.getByText("Enviar solicitação"));
+  await screen.findByText("Solicitação enviada.");
+  expect(createCalls[0]).toMatchObject({ city: "Sombrio", state: "SC" });
+  expect(createCalls[0]).not.toHaveProperty("neighborhood");
+});
+test("forged or stale city context cannot become an arbitrary request location", async () => {
+  await clientEntry();
+  await act(async () =>
+    router.push({
+      pathname: "/service-request/new",
+      params: { providerId: person.id, city: "Porto Alegre", state: "RS" },
+    }),
+  );
+  await screen.findByText(
+    "A cidade da busca não está entre as cidades atendidas. Escolha uma opção disponível antes de continuar.",
+  );
+  expect(screen.queryByText("Atendimento em Porto Alegre, RS")).toBeNull();
+  expect(
+    screen.getByRole("radio", { name: "Araranguá, SC", checked: false }),
+  ).toBeTruthy();
+  await fireEvent.press(screen.getByRole("radio", { name: "Araranguá, SC" }));
+  await send();
+  expect(createCalls[0]).toMatchObject({ city: "Araranguá", state: "SC" });
+});
+test("guest login keeps the selected non-pilot municipality through authentication without sending automatically", async () => {
+  person.areas = [{ ...person.areas[0], city: "Sombrio" }];
+  await renderRouter(routes, {
+    initialUrl: `/service-request/new?providerId=${person.id}&city=Sombrio&state=SC`,
+  });
+  await screen.findByText("Que bom ter você aqui");
+  expect(createCalls).toHaveLength(0);
+  await login();
+  expect(await screen.findByText("Atendimento em Sombrio, SC")).toBeTruthy();
+  expect(screen.queryByLabelText("Cidade do atendimento")).toBeNull();
+  expect(createCalls).toHaveLength(0);
+  await send();
+  expect(createCalls[0].city).toBe("Sombrio");
+});
+test("legacy pending payload is read without mutation or automatic submission and recovery keeps its original key and district", async () => {
+  await clientEntry();
+  const input: CreateRequestInput = {
+    providerId: person.id,
+    providerServiceId: person.services[0].id,
+    description: "Preciso instalar duas tomadas na sala.",
+    city: "Araranguá",
+    state: "SC",
+    neighborhood: "Polícia rodoviária",
+    idempotencyKey: randomUUID(),
+  };
+  await pendingRequests.write(clientId, { input });
+  const before = new Map(storage);
+  await act(async () =>
+    router.push({
+      pathname: "/service-request/new",
+      params: { providerId: person.id },
+    }),
+  );
+  await screen.findByText("Conferir envio pendente");
+  expect(screen.queryByText(/Polícia rodoviária/)).toBeNull();
+  expect(createCalls).toHaveLength(0);
+  expect(storage).toEqual(before);
+  await fireEvent.press(screen.getByText("Conferir e retomar envio"));
+  await screen.findByText("Solicitação enviada.");
+  expect(createCalls).toEqual([input]);
+  expect(rows).toHaveLength(1);
+  rows[0].neighborhood = "Polícia rodoviária";
+  await detail();
+  expect(screen.queryByText(/Polícia rodoviária/)).toBeNull();
 });

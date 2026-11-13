@@ -1,6 +1,8 @@
 # Fase 2.4 — Solicitações e contratação direta
 
-**Código preparado; implantação do banco pendente de revisão do responsável.** Branch `feature/fase-2-4-solicitacoes`, base `9b1c72cfa3cbeb1da13e8a4b319fae89b558d0f1`. Não houve execução de migration, GRANT, seed ou conexão com SQL Server nesta entrega. A fase só pode ser considerada concluída depois da aplicação revisada e dos testes físicos no iPhone.
+> Atualização de cobertura: [cidade e UF](cobertura-cidade-uf.md). As referências históricas a bairro como cobertura/preenchimento abaixo foram substituídas. O responsável informou que a migration e as permissões já foram aplicadas no SQL Server real. A correção municipal atual não requer novo SQL, e esta execução não acessou o banco.
+
+**Registro histórico da entrega original.** Branch `feature/fase-2-4-solicitacoes`, base `9b1c72cfa3cbeb1da13e8a4b319fae89b558d0f1`. Na entrega original, o código foi publicado com aplicação de migration/GRANT e testes físicos pendentes do responsável. O Codex não executou SQL nessa entrega. O status atualizado e o roteiro da correção municipal estão no guia acima.
 
 ## Escopo e arquitetura
 

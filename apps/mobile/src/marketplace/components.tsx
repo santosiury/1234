@@ -1,4 +1,8 @@
-import type { CatalogCategory, PublicProvider } from "@omini/shared";
+import type {
+  CatalogCategory,
+  PublicProvider,
+  CityLocation,
+} from "@omini/shared";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -73,8 +77,10 @@ export function CatalogCategoryCard({
 }
 export function PublicProfessionalCard({
   professional,
+  location,
 }: {
   professional: PublicProvider;
+  location?: CityLocation | null;
 }) {
   return (
     <Pressable
@@ -83,7 +89,7 @@ export function PublicProfessionalCard({
       onPress={() =>
         router.push({
           pathname: "/professional/[id]",
-          params: { id: professional.id },
+          params: { id: professional.id, ...(location ?? {}) },
         })
       }
       style={({ pressed }) => [ui.card, { opacity: pressed ? 0.7 : 1 }]}
@@ -109,10 +115,7 @@ export function PublicProfessionalCard({
       <Text style={ui.small}>
         {professional.areas
           .slice(0, 2)
-          .map(
-            (a) =>
-              `${a.neighborhood || "Toda a cidade"} · ${a.city}/${a.state}`,
-          )
+          .map((a) => `${a.city} — ${a.state}`)
           .join("\n")}
       </Text>
     </Pressable>

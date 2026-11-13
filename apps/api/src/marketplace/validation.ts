@@ -38,7 +38,7 @@ export const serviceSchema = z
 export const updateServiceSchema = serviceSchema
   .partial()
   .refine((v) => Object.keys(v).length > 0);
-export const areaSchema = z
+const legacyAreaSchema = z
   .object({
     city: name(100),
     state,
@@ -51,9 +51,18 @@ export const areaSchema = z
     isActive: z.boolean().optional(),
   })
   .strict();
-export const updateAreaSchema = areaSchema
+function stripNeighborhood<T extends { neighborhood?: unknown }>(
+  value: T,
+): Omit<T, "neighborhood"> {
+  const copy = { ...value };
+  delete copy.neighborhood;
+  return copy;
+}
+export const areaSchema = legacyAreaSchema.transform(stripNeighborhood);
+export const updateAreaSchema = legacyAreaSchema
   .partial()
-  .refine((v) => Object.keys(v).length > 0);
+  .refine((v) => Object.keys(v).some((key) => key !== "neighborhood"))
+  .transform(stripNeighborhood);
 const optionalText = (max: number) =>
   z
     .string()
@@ -71,5 +80,6 @@ export const catalogQuerySchema = z
     page: z.coerce.number().int().min(1).max(1000).default(1),
     pageSize: z.coerce.number().int().min(1).max(20).default(10),
   })
-  .strict();
+  .strict()
+  .transform(stripNeighborhood);
 export type ParsedCatalogQuery = z.infer<typeof catalogQuerySchema>;

@@ -110,7 +110,7 @@ export function ProviderDashboard() {
             />
             <StepRow
               title="Onde atendo"
-              description="As cidades e os bairros atendidos."
+              description="As cidades onde você atende."
               complete={hasAreas}
               icon="location-outline"
               onPress={() => router.push("/provider/areas")}
@@ -156,7 +156,7 @@ export function ProviderProfileOverview() {
       )}
       <ActionRow
         title="Onde atendo"
-        description="Cidades e bairros atendidos"
+        description="Cidades atendidas"
         icon="location-outline"
         onPress={() => router.replace("/provider/areas", { withAnchor: true })}
       />
@@ -253,7 +253,7 @@ export function ProviderAreas() {
     <ScreenContainer>
       <ProviderHeader
         title="Onde atendo"
-        subtitle="Informe as cidades e os bairros atendidos."
+        subtitle="Cada cidade cadastrada será atendida integralmente."
         topic="areas"
         onBack={() => router.dismissTo("/provider")}
         back
@@ -273,7 +273,7 @@ export function ProviderAreas() {
           {!result.data.areas.length && (
             <EmptyState
               title="Onde você pode ajudar?"
-              description="Adicione uma cidade. Se atender toda a cidade, deixe o bairro em branco."
+              description="Adicione uma cidade e a respectiva UF. A cobertura inclui todo o município."
               icon="location-outline"
             />
           )}
@@ -282,7 +282,7 @@ export function ProviderAreas() {
               key={area.id}
               kind="area"
               name={`${area.city}/${area.state}`}
-              description={area.neighborhood || "Toda a cidade"}
+              description="Atendimento em toda a cidade"
               active={area.isActive}
               onEdit={() => {
                 notice.clear();

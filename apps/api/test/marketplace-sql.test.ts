@@ -38,7 +38,9 @@ test("SQL catalog query binds every user value, escapes LIKE literals and filter
     (query.sql.match(/FROM \[dbo\]\.\[ProviderServiceArea\]/g) ?? []).length,
     1,
   );
-  assert.match(query.sql, /a\.\[city\].+a\.\[state\].+a\.\[neighborhood\]/s);
+  assert.match(query.sql, /a\.\[city\].+a\.\[state\]/s);
+  assert.ok(!query.sql.includes("neighborhood"));
+  assert.ok(!query.values.includes("Centro"));
   assert.match(query.sql, /a\.\[isActive\] = 1/);
   assert.match(query.sql, /c\.\[isActive\] = 1/);
   assert.match(query.sql, /u\.\[isActive\] = 1/);
@@ -167,10 +169,16 @@ test("Prisma creation derives provider ownership, validates the category and use
       },
     },
     providerServiceArea: {
-      count: async () => 0,
+      findMany: async () => [],
       create: async (input: unknown) => {
         writes.push(input);
-        return input;
+        return {
+          id: randomUUID(),
+          city: "Araranguá",
+          state: "SC",
+          isActive: true,
+          neighborhood: "",
+        };
       },
     },
   };
@@ -195,12 +203,17 @@ test("Prisma creation derives provider ownership, validates the category and use
       },
     },
     {
-      data: { city: "Araranguá", state: "SC", providerId: pid },
+      data: {
+        city: "Araranguá",
+        state: "SC",
+        isActive: undefined,
+        neighborhood: "",
+        providerId: pid,
+      },
       select: {
         id: true,
         city: true,
         state: true,
-        neighborhood: true,
         isActive: true,
       },
     },
@@ -219,7 +232,14 @@ test("Prisma collection limits reject new services and areas before any write", 
       },
     },
     providerServiceArea: {
-      count: async () => 50,
+      findMany: async () =>
+        Array.from({ length: 50 }, (_, i) => ({
+          id: randomUUID(),
+          city: `Cidade ${i}`,
+          state: "SC",
+          isActive: true,
+          neighborhood: "",
+        })),
       create: async () => {
         writes++;
       },

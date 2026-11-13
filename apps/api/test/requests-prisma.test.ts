@@ -72,9 +72,10 @@ test("Prisma requests use Serializable transactions, bound location values, data
       !sql[1].text.includes(city) && !sql[1].text.includes(neighborhood),
     );
     assert.ok(
-      sql[1].values.includes(city) && sql[1].values.includes(neighborhood),
+      sql[1].values.includes(city) && !sql[1].values.includes(neighborhood),
     );
-    assert.match(sql[1].text, /\[neighborhood\]=N'' OR/);
+    assert.ok(!sql[1].text.includes("neighborhood"));
+    assert.match(sql[1].text, /\[state\] COLLATE Latin1_General_100_CI_AI/);
     assert.match(sql[1].text, /\[isActive\]=1/);
     assert.equal(
       await tx.patch("request", "REQUESTED", 7, {

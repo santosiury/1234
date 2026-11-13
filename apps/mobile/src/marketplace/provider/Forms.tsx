@@ -312,21 +312,17 @@ function AreaForm({
   record?: ProviderAreaRecord;
 }) {
   const initial = {
-    city: record?.city ?? "Araranguá",
-    state: record?.state ?? "SC",
-    neighborhood: record?.neighborhood ?? "",
+    city: record?.city ?? "",
+    state: record?.state ?? "",
   };
   const [city, setCity] = useState(initial.city);
   const [state, setState] = useState(initial.state);
-  const [neighborhood, setNeighborhood] = useState(initial.neighborhood);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const notice = useProviderNotice("areas", false);
   const exit = useFormExit(
-    city !== initial.city ||
-      state !== initial.state ||
-      neighborhood !== initial.neighborhood,
+    city !== initial.city || state !== initial.state,
     busy,
     "/provider/areas",
   );
@@ -335,10 +331,11 @@ function AreaForm({
     if (
       city.trim().length < 2 ||
       city.trim().length > 100 ||
-      state.trim().length !== 2 ||
-      neighborhood.length > 100
+      state.trim().length !== 2
     ) {
-      setError("Informe a cidade e a sigla do estado. O bairro é opcional.");
+      setError(
+        "Informe a cidade e a sigla do estado. A cobertura inclui todo o município.",
+      );
       return;
     }
     inFlight.current = true;
@@ -348,7 +345,6 @@ function AreaForm({
       const input = {
         city: city.trim(),
         state: state.trim().toUpperCase(),
-        neighborhood: neighborhood.trim(),
       };
       if (record) await api.updateArea(record.id, input);
       else await api.createArea(input);
@@ -387,15 +383,7 @@ function AreaForm({
         autoCapitalize="characters"
         editable={!busy}
       />
-      <OminiInput
-        label="Bairro (opcional)"
-        accessibilityLabel="Bairro atendido"
-        hint="Se você atende toda a cidade, deixe o bairro em branco."
-        value={neighborhood}
-        onChangeText={setNeighborhood}
-        maxLength={100}
-        editable={!busy}
-      />
+      <Text style={ui.small}>Esta cidade será atendida integralmente.</Text>
       {!!error && <Feedback message={error} />}
       <PrimaryButton
         title="Salvar área"

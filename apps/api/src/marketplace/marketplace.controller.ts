@@ -1,3 +1,4 @@
+import { cityAreas } from "@omini/shared";
 import {
   Body,
   Controller,
@@ -44,10 +45,6 @@ const serviceProperties = {
 const areaProperties = {
   city: { ...text(100), minLength: 2 },
   state: { type: "string", pattern: "^[A-Z]{2}$", example: "SC" },
-  neighborhood: {
-    ...text(100),
-    description: "Vazio significa atendimento em toda a cidade.",
-  },
   isActive: { type: "boolean" },
 } as const;
 
@@ -79,7 +76,7 @@ const serviceResponse = {
 };
 const areaResponse = {
   type: "object" as const,
-  required: ["id", "city", "state", "neighborhood", "isActive"],
+  required: ["id", "city", "state", "isActive"],
   properties: {
     ...areaProperties,
     id: { type: "string" as const, format: "uuid" },
@@ -135,7 +132,6 @@ export class CatalogController {
   })
   @ApiQuery({ name: "city", required: false, type: String })
   @ApiQuery({ name: "state", required: false, type: String })
-  @ApiQuery({ name: "neighborhood", required: false, type: String })
   @ApiQuery({
     name: "page",
     required: false,
@@ -200,7 +196,10 @@ export class ProviderController {
       "Perfil, serviços e áreas da conta autenticada; ativação via POST /auth/profiles",
   })
   me(@CurrentUser() user: AuthUser) {
-    return this.service.run((repo) => repo.own(user.id));
+    return this.service.run(async (repo) => {
+      const value = await repo.own(user.id);
+      return { ...value, areas: cityAreas(value.areas) };
+    });
   }
   @Patch()
   @ApiResponse({ status: 200, schema: ownResponse })
@@ -217,9 +216,13 @@ export class ProviderController {
     },
   })
   update(@CurrentUser() user: AuthUser, @Body() body: unknown) {
-    return this.service.run((repo) =>
-      repo.updateProfile(user.id, parseInput(updateProviderSchema, body)),
-    );
+    return this.service.run(async (repo) => {
+      const value = await repo.updateProfile(
+        user.id,
+        parseInput(updateProviderSchema, body),
+      );
+      return { ...value, areas: cityAreas(value.areas) };
+    });
   }
   @Get("services")
   @ApiResponse({
@@ -275,7 +278,9 @@ export class ProviderController {
   @ApiResponse({ status: 200, schema: { type: "array", items: areaResponse } })
   @Header("Cache-Control", "no-store")
   areas(@CurrentUser() user: AuthUser) {
-    return this.service.run(async (repo) => (await repo.own(user.id)).areas);
+    return this.service.run(async (repo) =>
+      cityAreas((await repo.own(user.id)).areas),
+    );
   }
   @Post("areas")
   @ApiResponse({ status: 201, schema: areaResponse })

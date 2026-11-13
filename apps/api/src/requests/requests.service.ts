@@ -160,6 +160,8 @@ export class RequestsService {
       const now = await tx.now();
       const row = await tx.insert({
         ...content,
+        // Keep legacy payload in the receipt hash, but never collect/store a district for a new request.
+        neighborhood: "",
         clientUserId: userId,
         providerUserId: target.providerUserId,
         clientNameSnapshot: user.displayName,

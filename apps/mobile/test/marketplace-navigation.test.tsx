@@ -1,3 +1,4 @@
+import { cityKey, cityAreas } from "@omini/shared";
 import {
   act,
   fireEvent,
@@ -178,8 +179,10 @@ beforeEach(() => {
         const value = profile.areas.find(
           (a) => a.id === path.split("/").at(-1),
         )!;
-        Object.assign(value, body as UpdateAreaInput);
-        return clone(value);
+        const key = cityKey(value);
+        const group = profile.areas.filter((a) => cityKey(a) === key);
+        for (const area of group) Object.assign(area, body as UpdateAreaInput);
+        return clone(cityAreas(group)[0]);
       }
       throw Error("Unexpected fixture endpoint: " + path);
     });
@@ -256,11 +259,13 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
   await fireEvent.press(screen.getByText("Onde atendo"));
   await screen.findByText("Onde você pode ajudar?");
   await fireEvent.press(screen.getByText("Adicionar área"));
-  await screen.findByLabelText("Bairro atendido");
+  await screen.findByLabelText("Cidade atendida");
   await fireEvent.changeText(
-    screen.getByLabelText("Bairro atendido"),
-    "Centro",
+    screen.getByLabelText("Cidade atendida"),
+    "Araranguá",
   );
+  await fireEvent.changeText(screen.getByLabelText("Estado atendido"), "SC");
+  expect(screen.queryByLabelText("Bairro atendido")).toBeNull();
   await fireEvent.press(screen.getByText("Salvar área"));
   await screen.findByText("Área de atendimento salva.");
   await testRouter.push("/provider/services");
@@ -349,7 +354,8 @@ test("real forms enroll one provider, save profile/service/area, edit and deacti
   );
   expect(await screen.findByText("Instalações elétricas")).toBeTruthy();
   expect(screen.getByText("Reparos residenciais.")).toBeTruthy();
-  expect(screen.getByText("Centro")).toBeTruthy();
+  expect(screen.queryByText("Centro")).toBeNull();
+  expect(screen.getByText("Araranguá/SC")).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "Solicitar serviço" }),
   ).toBeEnabled();
@@ -384,7 +390,7 @@ test("anonymous real catalog uses API categories and filters with no fictitious 
     "Eletricista",
   );
   await fireEvent.press(screen.getByText("Filtrar por localidade"));
-  await fireEvent.changeText(screen.getByLabelText("Filtrar bairro"), "Centro");
+  expect(screen.queryByLabelText("Filtrar bairro")).toBeNull();
   await fireEvent.press(screen.getByText("Pesquisar profissionais"));
   await screen.findByText("1 profissionais encontrados");
   const query = requests
@@ -392,7 +398,7 @@ test("anonymous real catalog uses API categories and filters with no fictitious 
     .at(-1)!;
   const params = new URL("http://fixture/" + query.path).searchParams;
   expect(params.get("categoryId")).toBe(category.id);
-  expect(params.get("neighborhood")).toBe("Centro");
+  expect(params.has("neighborhood")).toBe(false);
   expect(params.get("city")).toBe("Araranguá");
   expect(query.access).toBeUndefined();
   expect(screen.getByText("Próxima página")).toBeDisabled();
@@ -659,18 +665,17 @@ test("area management edits a saved record, supports whole-city coverage and kee
   expect(await screen.findByLabelText("Cidade atendida")).toHaveDisplayValue(
     "Araranguá",
   );
-  expect(screen.getByLabelText("Bairro atendido")).toHaveDisplayValue("Centro");
+  expect(screen.queryByLabelText("Bairro atendido")).toBeNull();
   await fireEvent.changeText(
     screen.getByLabelText("Cidade atendida"),
     "Criciúma",
   );
-  await fireEvent.changeText(screen.getByLabelText("Bairro atendido"), "");
   expect(
-    screen.getByText("Se você atende toda a cidade, deixe o bairro em branco."),
+    screen.getByText("Esta cidade será atendida integralmente."),
   ).toBeTruthy();
   await fireEvent.press(screen.getByText("Salvar área"));
   await screen.findByText("Área de atendimento salva.");
-  expect(await screen.findByText("Toda a cidade")).toBeTruthy();
+  expect(await screen.findByText("Atendimento em toda a cidade")).toBeTruthy();
   expect(profile.areas).toHaveLength(1);
   expect(profile.areas[0].city).toBe("Criciúma");
   await testRouter.push("/provider/profile");
@@ -762,7 +767,12 @@ test("the first service leads to coverage and back to the completed professional
   await fireEvent.press(screen.getByText("Salvar serviço"));
   await fireEvent.press(await screen.findByText("Continuar: onde atendo"));
   await screen.findByLabelText("Cidade atendida");
-  expect(screen.getByLabelText("Bairro atendido")).toHaveDisplayValue("");
+  expect(screen.queryByLabelText("Bairro atendido")).toBeNull();
+  await fireEvent.changeText(
+    screen.getByLabelText("Cidade atendida"),
+    "Araranguá",
+  );
+  await fireEvent.changeText(screen.getByLabelText("Estado atendido"), "SC");
   await fireEvent.press(screen.getByText("Salvar área"));
   expect(screen.queryByRole("button", { name: "Ver meu painel" })).toBeNull();
   await fireEvent.press(screen.getByRole("button", { name: "Painel" }));
@@ -860,6 +870,14 @@ test.each(["services", "profile", "areas"] as const)(
         screen.getByRole("button", { name: "Adicionar área" }),
       );
       await screen.findByLabelText("Cidade atendida");
+      await fireEvent.changeText(
+        screen.getByLabelText("Cidade atendida"),
+        "Araranguá",
+      );
+      await fireEvent.changeText(
+        screen.getByLabelText("Estado atendido"),
+        "SC",
+      );
       await fireEvent.press(
         screen.getByRole("button", { name: "Salvar área" }),
       );
@@ -1064,6 +1082,11 @@ test("continuing from the first service to coverage replaces the section so back
   await fireEvent.press(screen.getByRole("button", { name: "Salvar serviço" }));
   await fireEvent.press(await screen.findByText("Continuar: onde atendo"));
   await screen.findByLabelText("Cidade atendida");
+  await fireEvent.changeText(
+    screen.getByLabelText("Cidade atendida"),
+    "Araranguá",
+  );
+  await fireEvent.changeText(screen.getByLabelText("Estado atendido"), "SC");
   await fireEvent.press(screen.getByRole("button", { name: "Salvar área" }));
   await screen.findByText("Área de atendimento salva.");
   expect(screen).toHavePathname("/provider/areas");
@@ -1254,4 +1277,42 @@ test("professional profile and public real catalog show empty reviews without in
   expect(requests.some((request) => /review|avaliac/i.test(request.path))).toBe(
     false,
   );
+});
+
+test("legacy districts render as one active municipality and deactivate/reactivate together without account or Stack regressions", async () => {
+  completeFixture();
+  profile.areas[0].isActive = false;
+  profile.areas.push({
+    ...profile.areas[0],
+    id: "50000000-0000-4000-8000-000000000002",
+    neighborhood: "Polícia rodoviária",
+    isActive: true,
+  });
+  await providerEntry();
+  await testRouter.push("/provider/areas");
+  await screen.findByRole("header", { name: "Onde atendo" });
+  expect(
+    screen.getAllByRole("button", { name: /^Gerenciar área Araranguá\/SC/ }),
+  ).toHaveLength(1);
+  expect(screen.queryByText(/Polícia rodoviária|Centro/)).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("button", { name: /^Gerenciar área Araranguá\/SC/ }),
+  );
+  await fireEvent.press(screen.getByText("Desativar área"));
+  await fireEvent.press(screen.getByText("Confirmar desativação"));
+  await screen.findByText("Área desativada.");
+  expect(profile.areas.every((a) => !a.isActive)).toBe(true);
+  await fireEvent.press(
+    screen.getByRole("button", { name: /^Gerenciar área Araranguá\/SC/ }),
+  );
+  await fireEvent.press(screen.getByText("Reativar área"));
+  await fireEvent.press(screen.getByText("Confirmar reativação"));
+  await screen.findByText("Área reativada.");
+  expect(profile.areas.every((a) => a.isActive)).toBe(true);
+  expect(profile.areas.map((a) => a.neighborhood)).toEqual([
+    "Centro",
+    "Polícia rodoviária",
+  ]);
+  await fireEvent.press(screen.getByRole("button", { name: "Painel" }));
+  await screen.findByRole("header", { name: "Meu espaço profissional" });
 });

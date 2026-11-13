@@ -1,3 +1,4 @@
+import { cityAreas } from "@omini/shared";
 import type {
   CatalogCategory,
   CatalogQuery,
@@ -69,7 +70,6 @@ function area(v: unknown): v is ProviderAreaRecord {
     text(v.id) &&
     text(v.city) &&
     text(v.state) &&
-    text(v.neighborhood) &&
     typeof v.isActive === "boolean"
   );
 }
@@ -204,17 +204,29 @@ export class CatalogApi {
   async providers(query: CatalogQuery = {}) {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query))
-      if (value !== undefined && value !== "") params.set(key, String(value));
-    return parse(
+      if (key !== "neighborhood" && value !== undefined && value !== "")
+        params.set(key, String(value));
+    const result = parse(
       await http.request(`catalog/providers?${params.toString()}`),
       page,
     );
+    return {
+      ...result,
+      items: result.items.map((p) => ({
+        ...p,
+        areas: cityAreas(p.areas).filter((a) => a.isActive),
+      })),
+    };
   }
   async provider(id: string) {
-    return parse(
+    const result = parse(
       await http.request(`catalog/providers/${encodeURIComponent(id)}`),
       provider,
     );
+    return {
+      ...result,
+      areas: cityAreas(result.areas).filter((a) => a.isActive),
+    };
   }
 }
 export class ProviderApi {
@@ -232,11 +244,13 @@ export class ProviderApi {
       ),
     );
   }
-  me() {
-    return this.call("", workspace);
+  async me() {
+    const result = await this.call("", workspace);
+    return { ...result, areas: cityAreas(result.areas) };
   }
-  update(input: UpdateProviderInput) {
-    return this.call("", workspace, "PATCH", input);
+  async update(input: UpdateProviderInput) {
+    const result = await this.call("", workspace, "PATCH", input);
+    return { ...result, areas: cityAreas(result.areas) };
   }
   createService(input: CreateServiceInput) {
     return this.call("/services", service, "POST", input);

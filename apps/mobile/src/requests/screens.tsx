@@ -384,7 +384,6 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
             <Text style={ui.text}>{row.description}</Text>
             <Text style={ui.small}>
               {row.city}/{row.state}
-              {row.neighborhood ? ` · ${row.neighborhood}` : " · Toda a cidade"}
             </Text>
             <Text style={ui.small}>
               Enviada em {requestDate(row.createdAt)}

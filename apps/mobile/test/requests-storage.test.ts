@@ -172,3 +172,45 @@ test("a delayed request adapter cannot send under a different account after logo
   expect(manager.state.user?.id).toBe(other);
   expect(manager.state.status).toBe("authenticated");
 });
+
+test("new journal payload omits district, while reading a legacy payload preserves its exact bytes and stable key", async () => {
+  const current = { ...input };
+  delete current.neighborhood;
+  await pendingRequests.write(owner, { input: current });
+  expect((await pendingRequests.read(owner))?.input).not.toHaveProperty(
+    "neighborhood",
+  );
+  await pendingRequests.clear(owner);
+  await pendingRequests.write(owner, { input });
+  const before = new Map(values),
+    calls = jest.mocked(SecureStore.setItemAsync).mock.calls.length;
+  expect(await pendingRequests.read(owner)).toEqual({ input });
+  expect(values).toEqual(before);
+  expect(jest.mocked(SecureStore.setItemAsync).mock.calls.length).toBe(calls);
+});
+test("authentication city context is bounded and kept with provider/service intent", () => {
+  expect(
+    requestAuthReturn({
+      requestProvider: input.providerId,
+      requestService: input.providerServiceId,
+      requestCity: "  Criciúma ",
+      requestState: "sc",
+    }),
+  ).toEqual({
+    pathname: "/service-request/new",
+    params: {
+      providerId: input.providerId,
+      serviceId: input.providerServiceId,
+      city: "Criciúma",
+      state: "SC",
+    },
+  });
+  for (const value of [
+    { requestCity: ["Criciúma"], requestState: "SC" },
+    { requestCity: "Criciúma", requestState: "ZZ" },
+    { requestCity: "x".repeat(101), requestState: "SC" },
+  ])
+    expect(
+      requestIntent({ requestProvider: input.providerId, ...value }),
+    ).toEqual({ requestProvider: input.providerId });
+});

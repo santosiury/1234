@@ -145,7 +145,13 @@ export class RequestsController {
         description: { type: "string", minLength: 10, maxLength: 1000 },
         city: { type: "string", minLength: 2, maxLength: 100 },
         state: { type: "string", pattern: "^[A-Z]{2}$" },
-        neighborhood: { type: "string", maxLength: 100 },
+        neighborhood: {
+          type: "string",
+          maxLength: 100,
+          deprecated: true,
+          description:
+            "Somente compatibilidade com envios antigos; não valida cobertura. Novos pedidos não coletam bairro.",
+        },
       },
     },
   })

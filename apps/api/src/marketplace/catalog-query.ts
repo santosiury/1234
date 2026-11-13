@@ -25,10 +25,9 @@ export function catalogWhere(query: ParsedCatalogQuery): Prisma.Sql {
     area.push(
       Prisma.sql`a.[city] COLLATE Latin1_General_100_CI_AI = ${query.city}`,
     );
-  if (query.state) area.push(Prisma.sql`a.[state] = ${query.state}`);
-  if (query.neighborhood)
+  if (query.state)
     area.push(
-      Prisma.sql`(a.[neighborhood] = N'' OR a.[neighborhood] COLLATE Latin1_General_100_CI_AI = ${query.neighborhood})`,
+      Prisma.sql`a.[state] COLLATE Latin1_General_100_CI_AI = ${query.state}`,
     );
   conditions.push(
     Prisma.sql`EXISTS (SELECT 1 FROM [dbo].[ProviderServiceArea] a WHERE ${Prisma.join(area, " AND ")})`,
