@@ -40,6 +40,17 @@ export class AuthController {
           minLength: 12,
           maxLength: 128,
         },
+        contact: {
+          type: "object",
+          description: "Obrigatório com perfil cliente e shareContact=true",
+          required: ["phone", "hasWhatsapp", "shareContact"],
+          additionalProperties: false,
+          properties: {
+            phone: { type: "string" },
+            hasWhatsapp: { type: "boolean" },
+            shareContact: { type: "boolean" },
+          },
+        },
         profiles: {
           type: "array",
           minItems: 1,

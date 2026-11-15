@@ -10,6 +10,7 @@ export type EventRow = ServiceRequestEvent;
 export interface RequestActor {
   id: string;
   displayName: string;
+  contactReady?: boolean;
   client: boolean;
   provider: boolean;
 }

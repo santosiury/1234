@@ -1,3 +1,5 @@
+import { contactReady } from "@omini/shared";
+import { ApiError } from "../api-error";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { AuthUser, ExperienceMode, RegisterInput } from "@omini/shared";
@@ -10,6 +12,7 @@ export function publicUser(user: DbUser): AuthUser {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    contactReady: contactReady(user),
     profiles: {
       client: user.clientProfile?.isActive === true,
       provider: user.providerProfile?.isActive === true,
@@ -34,6 +37,15 @@ export class PrismaAuthRepository extends AuthRepository {
         if (existing.length) return;
         await tx.user.create({
           data: {
+            phone: input.contact?.phone,
+            hasWhatsapp: input.contact?.hasWhatsapp ?? false,
+            phoneShareConsentedAt: input.contact?.shareContact
+              ? (
+                  await tx.$queryRaw<
+                    { now: Date }[]
+                  >`SELECT SYSUTCDATETIME() AS [now]`
+                )[0].now
+              : null,
             email: input.email,
             displayName: input.displayName,
             authCredential: {
@@ -169,6 +181,12 @@ export class PrismaAuthRepository extends AuthRepository {
       const current =
         role === "client" ? user.clientProfile : user.providerProfile;
       if (current && !current.isActive) return null;
+      if (role === "client" && !contactReady(user))
+        throw new ApiError(
+          400,
+          "CONTACT_REQUIRED",
+          "Atualize seu celular e autorize o compartilhamento antes de ativar o perfil cliente.",
+        );
       if (role === "client")
         await tx.clientProfile.upsert({
           where: { userId },

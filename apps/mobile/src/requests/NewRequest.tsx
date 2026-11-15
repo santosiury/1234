@@ -1,3 +1,4 @@
+import { ContactEditor } from "../contact/ContactForm";
 import { useRequestUpdates } from "./notifications/provider";
 import { useCallback, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -122,6 +123,7 @@ function RequestLoader({
   location: CityLocation | null;
 }) {
   const api = useRequestsApi();
+  const { state } = useSession();
   const result = useRemote(
     useCallback(async () => {
       const pending = await pendingRequests.read(owner);
@@ -139,6 +141,11 @@ function RequestLoader({
     );
   return result.data.pending ? (
     <RecoverCreation pending={result.data.pending} owner={owner} api={api} />
+  ) : !state.user?.contactReady ? (
+    <ScreenContainer>
+      <Header title="Atualize seu contato" back />
+      <ContactEditor />
+    </ScreenContainer>
   ) : result.data.person ? (
     <CreateForm
       person={result.data.person}
@@ -218,7 +225,8 @@ function RecoverCreation({
       if (
         e instanceof AuthFailure &&
         [400, 403].includes(e.status) &&
-        e.code !== "ACCOUNT_CHANGED"
+        e.code !== "ACCOUNT_CHANGED" &&
+        e.code !== "CONTACT_REQUIRED"
       )
         setRejected(true);
     } finally {
@@ -245,6 +253,7 @@ function RecoverCreation({
         </Text>
       </View>
       {!!error && <Feedback message={error} />}
+      <ContactEditor />
       <PrimaryButton
         title="Conferir e retomar envio"
         loading={busy}
@@ -367,7 +376,8 @@ function CreateForm({
       if (
         e instanceof AuthFailure &&
         [400, 403].includes(e.status) &&
-        e.code !== "ACCOUNT_CHANGED"
+        e.code !== "ACCOUNT_CHANGED" &&
+        e.code !== "CONTACT_REQUIRED"
       ) {
         await pendingRequests.clear(owner).catch(() => undefined);
         prepared.current = null;

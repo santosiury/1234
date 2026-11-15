@@ -1,4 +1,5 @@
 export * from "./location";
+export * from "./contact";
 export type ExperienceMode = "client" | "provider";
 export interface HealthResponse {
   status: "ok";
@@ -24,6 +25,7 @@ export interface AuthUser {
   displayName: string;
   email: string;
   profiles: { client: boolean; provider: boolean };
+  contactReady?: boolean;
 }
 export interface AuthTokens {
   user: AuthUser;
@@ -37,6 +39,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   profiles: ExperienceMode[];
+  contact?: import("./contact").ContactInput;
 }
 
 // Real catalog contracts. DemoProfessional remains exclusive to the explicit demo.

@@ -1,4 +1,19 @@
 import { z } from "zod";
+import { normalizeBrazilMobile } from "@omini/shared";
+export const contactSchema = z
+  .object({
+    phone: z.string().transform((v, ctx) => {
+      const n = normalizeBrazilMobile(v);
+      if (!n) {
+        ctx.addIssue({ code: "custom", message: "Celular inválido." });
+        return z.NEVER;
+      }
+      return n;
+    }),
+    hasWhatsapp: z.boolean(),
+    shareContact: z.boolean(),
+  })
+  .strict();
 import { ApiError } from "../api-error";
 const email = z
   .string()
@@ -12,6 +27,7 @@ export const profileSchema = z.object({ role: roleSchema }).strict();
 export const passwordSchema = z.string().min(12).max(128).regex(/\S/);
 export const registerSchema = z
   .object({
+    contact: contactSchema.optional(),
     displayName: z.string().trim().min(2).max(120),
     email,
     password: passwordSchema,
@@ -22,7 +38,14 @@ export const registerSchema = z
       .refine((roles) => new Set(roles).size === roles.length)
       .default(["client"]),
   })
-  .strict();
+  .strict()
+  .refine(
+    (v) => !v.profiles.includes("client") || v.contact?.shareContact === true,
+    {
+      path: ["contact"],
+      message: "Informe o contato e autorize o compartilhamento após o aceite.",
+    },
+  );
 export const loginSchema = z
   .object({ email, password: z.string().min(1).max(128) })
   .strict();

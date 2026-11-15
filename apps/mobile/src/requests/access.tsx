@@ -1,3 +1,4 @@
+import { ContactEditor } from "../contact/ContactForm";
 import { useMemo, useState } from "react";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
 import type { RequestParticipant } from "@omini/shared";
@@ -45,6 +46,7 @@ export function RequestRoleGate({
         Para continuar, ative o perfil de{" "}
         {role === "client" ? "cliente" : "prestador"} na mesma conta.
       </Text>
+      {role === "client" && !state.user?.contactReady && <ContactEditor />}
       {!!error && <Feedback message={error} />}
       <PrimaryButton
         title={`Ativar perfil de ${role === "client" ? "cliente" : "prestador"}`}

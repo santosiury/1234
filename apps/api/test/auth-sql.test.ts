@@ -93,7 +93,11 @@ test("incremental auth SQL preserves original tables, indexes, seed and provider
       (item) => item.name === model.name,
     )!;
     assert.deepEqual(
-      next.fields.filter((field) => field.kind === "scalar"),
+      next.fields.filter(
+        (field) =>
+          field.kind === "scalar" &&
+          model.fields.some((priorField) => priorField.name === field.name),
+      ),
       model.fields.filter((field) => field.kind === "scalar"),
     );
   }

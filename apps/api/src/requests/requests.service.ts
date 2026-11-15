@@ -144,6 +144,12 @@ export class RequestsService {
           "CLIENT_REQUIRED",
           "Ative seu perfil cliente para solicitar um serviço.",
         );
+      if (!user.contactReady)
+        throw new ApiError(
+          400,
+          "CONTACT_REQUIRED",
+          "Atualize seu celular em Minha conta e autorize o compartilhamento após o aceite antes de enviar uma nova solicitação.",
+        );
       const target = await tx.target(input);
       if (!target)
         throw new ApiError(

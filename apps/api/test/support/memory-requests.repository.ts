@@ -34,6 +34,7 @@ export class MemoryRequestsRepository extends RequestsRepository {
           );
           return row
             ? {
+                contactReady: row.user.contactReady,
                 id,
                 displayName: row.user.displayName,
                 client: row.user.profiles.client,

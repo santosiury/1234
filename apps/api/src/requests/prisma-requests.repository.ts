@@ -1,3 +1,4 @@
+import { contactReady } from "@omini/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../persistence/prisma.service";
@@ -24,12 +25,15 @@ export class PrismaRequestsRepository extends RequestsRepository {
               select: {
                 id: true,
                 displayName: true,
+                phone: true,
+                phoneShareConsentedAt: true,
                 clientProfile: { select: { isActive: true } },
                 providerProfile: { select: { isActive: true } },
               },
             });
             return user
               ? {
+                  contactReady: contactReady(user),
                   id: user.id,
                   displayName: user.displayName,
                   client: !!user.clientProfile?.isActive,

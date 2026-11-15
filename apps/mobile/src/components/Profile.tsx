@@ -1,3 +1,4 @@
+import { ContactEditor } from "../contact/ContactForm";
 import { useProfessionalEntry } from "../marketplace/provider/navigation";
 import { useSession } from "../auth/session";
 import { AuthFailure } from "../auth/api";
@@ -161,6 +162,7 @@ export function Profile({
                 ),
               )}
           </View>
+          <ContactEditor key={state.user.id} />
           <PrimaryButton
             secondary
             title="Atualizar conta"

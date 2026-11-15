@@ -18,6 +18,7 @@ export class MemoryAuthRepository extends AuthRepository {
   async register(input: RegisterInput, passwordHash: string) {
     if (this.users.has(input.email)) return;
     const user: AuthUser = {
+      contactReady: !!input.contact?.shareContact,
       id: randomUUID(),
       email: input.email,
       displayName: input.displayName,

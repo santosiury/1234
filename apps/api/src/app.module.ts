@@ -1,3 +1,4 @@
+import { ContactModule } from "./contact/contact.module";
 import { RequestsModule } from "./requests/requests.module";
 import { MarketplaceModule } from "./marketplace/marketplace.module";
 import { AuthModule } from "./auth/auth.module";
@@ -18,6 +19,7 @@ import { validateEnvironment } from "./config";
     AuthModule,
     MarketplaceModule,
     RequestsModule,
+    ContactModule,
   ],
 })
 export class AppModule {}

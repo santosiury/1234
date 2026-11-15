@@ -18,6 +18,14 @@ import type { SessionManager } from "../auth/session-manager";
 const messages: Record<string, string> = {
   REQUESTS_UNAVAILABLE:
     "As solicitações estão temporariamente indisponíveis. Tente novamente.",
+  CONTACT_REQUIRED:
+    "Atualize o celular e autorize o compartilhamento após o aceite em Minha conta antes de enviar uma nova solicitação.",
+  CONTACT_UNAVAILABLE: "Contato indisponível para esta solicitação.",
+  REVIEWS_UNAVAILABLE:
+    "Avaliações temporariamente indisponíveis. Tente novamente.",
+  REVIEW_IMMUTABLE: "Esta avaliação já foi publicada e não pode ser alterada.",
+  REVIEW_NOT_ALLOWED:
+    "Só é possível avaliar seu próprio atendimento concluído.",
   CLIENT_REQUIRED: "Ative seu perfil cliente para solicitar um serviço.",
   INVALID_TARGET:
     "O serviço ou a área não está disponível. Confira o catálogo e a localização.",

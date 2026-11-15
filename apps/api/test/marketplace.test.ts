@@ -58,6 +58,11 @@ async function fixture() {
   async function login(provider = false) {
     const email = `person${next++}@example.test`;
     await call("auth/register", "POST", {
+      contact: {
+        phone: "+5548998765432",
+        hasWhatsapp: true,
+        shareContact: true,
+      },
       displayName: "Pessoa Teste",
       email,
       password: "uma senha de teste segura",

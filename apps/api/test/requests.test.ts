@@ -69,6 +69,11 @@ async function fixture(rate = false) {
   async function login(profiles: ("client" | "provider")[] = ["client"]) {
     const email = `request${seq++}@example.test`;
     await call("auth/register", "POST", {
+      contact: {
+        phone: "+5548998765432",
+        hasWhatsapp: true,
+        shareContact: true,
+      },
       displayName: "Pessoa Teste",
       email,
       password: "uma senha de teste segura",

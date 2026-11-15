@@ -13,6 +13,8 @@ model User {
   id              String           @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
   email           String           @unique @db.NVarChar(254)
   displayName     String           @db.NVarChar(120)
+  hasWhatsapp Boolean @default(false)
+  phoneShareConsentedAt DateTime? @db.DateTime2
   phone           String?          @db.NVarChar(25)
   isActive        Boolean          @default(true)
   createdAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @db.DateTime2

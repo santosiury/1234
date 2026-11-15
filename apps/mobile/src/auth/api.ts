@@ -19,6 +19,8 @@ const messages: Record<string, string> = {
   VALIDATION_ERROR:
     "Confira os dados. Use uma senha entre 12 e 128 caracteres.",
   TOO_MANY_ATTEMPTS: "Muitas tentativas. Aguarde antes de tentar novamente.",
+  CONTACT_REQUIRED:
+    "Atualize o celular e autorize seu compartilhamento em Minha conta antes de ativar o perfil cliente.",
   PROFILE_UNAVAILABLE: "Este perfil está indisponível.",
   AUTH_UNAVAILABLE: "Autenticação temporariamente indisponível.",
 };

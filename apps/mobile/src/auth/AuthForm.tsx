@@ -1,3 +1,5 @@
+import { ContactFields, emptyContact } from "../contact/ContactForm";
+import { normalizeBrazilMobile } from "@omini/shared";
 import { useState } from "react";
 import { Switch, Text, View } from "react-native";
 import { requestIntent, requestAuthReturn } from "../requests/intent";
@@ -16,6 +18,7 @@ import { theme } from "../theme";
 export function AuthForm({ register = false }: { register?: boolean }) {
   const { manager, state } = useSession();
   const intent = requestIntent(useLocalSearchParams());
+  const [contact, setContact] = useState(emptyContact);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,11 +46,29 @@ export function AuthForm({ register = false }: { register?: boolean }) {
       );
       return;
     }
+    if (
+      register &&
+      client &&
+      (!normalizeBrazilMobile(contact.phone) || !contact.shareContact)
+    ) {
+      setMessage(
+        "Informe um celular válido com DDD e autorize o compartilhamento após o aceite.",
+      );
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
       if (register) {
         await new AuthApi().register({
+          ...(client
+            ? {
+                contact: {
+                  ...contact,
+                  phone: normalizeBrazilMobile(contact.phone)!,
+                },
+              }
+            : {}),
           displayName: name.trim(),
           email: normalized,
           password,
@@ -178,6 +199,13 @@ export function AuthForm({ register = false }: { register?: boolean }) {
                 Você pode escolher os dois perfis na mesma conta.
               </Text>
             </View>
+          )}
+          {register && client && (
+            <ContactFields
+              value={contact}
+              onChange={setContact}
+              disabled={busy}
+            />
           )}
           <PrimaryButton
             title={register ? "Criar conta" : "Entrar"}

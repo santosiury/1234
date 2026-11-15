@@ -1,3 +1,4 @@
+import { RequestContactPanel } from "../contact/RequestContactPanel";
 import { useRequestUpdates, updateMessage } from "./notifications/provider";
 import { useRequestsApi, RequestRoleGate } from "./access";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -463,6 +464,9 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
               Enviada em {requestDate(row.createdAt)}
             </Text>
           </View>
+          {row.viewer === "provider" && (
+            <RequestContactPanel id={row.id} status={row.status} />
+          )}
           {row.status === "AWAITING_CONFIRMATION" && (
             <View style={ui.card}>
               <Text style={ui.section}>

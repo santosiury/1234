@@ -17,6 +17,7 @@ const input = {
   email: "pessoa@example.test",
   password: "uma senha de teste segura",
   profiles: ["client", "provider"],
+  contact: { phone: "+5548998765432", hasWhatsapp: true, shareContact: true },
 };
 async function fixture() {
   const repository = new MemoryAuthRepository();
