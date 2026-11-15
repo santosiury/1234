@@ -421,6 +421,7 @@ export function OminiInput({
         )}
         <TextInput
           {...props}
+          accessibilityLabel={props.accessibilityLabel ?? label}
           placeholderTextColor={theme.colors.muted}
           selectionColor={theme.colors.focus}
           style={[

@@ -41,6 +41,9 @@ function summary(v: unknown): v is ServiceRequestSummary {
     uuid(v.providerServiceId) &&
     status(v.status) &&
     integer(v.version) &&
+    (v.canReview === undefined || typeof v.canReview === "boolean") &&
+    (v.reviewSubmitted === undefined ||
+      typeof v.reviewSubmitted === "boolean") &&
     (v.viewer === "client" || v.viewer === "provider") &&
     Array.isArray(v.allowedActions) &&
     v.allowedActions.every(action) &&

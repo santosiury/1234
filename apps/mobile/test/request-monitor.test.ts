@@ -391,7 +391,7 @@ test("limited checkpoints and bounded API windows still use full API totals inst
   await sync(f);
   expect(f.monitor.state.providerPending).toBe(260);
   expect(f.monitor.state.clientPending).toBe(81);
-  expect(jest.mocked(f.api.list).mock.calls).toHaveLength(7);
+  expect(jest.mocked(f.api.list).mock.calls).toHaveLength(8);
   expect(
     jest
       .mocked(f.api.list)
@@ -538,5 +538,59 @@ test("a client's own newly created REQUESTED record establishes a baseline witho
   await f.monitor.refresh();
   await drain();
   expect(f.monitor.state.notice?.title).toBe("Solicitação aceita");
+  f.monitor.dispose();
+});
+
+test("completed service offers one optional review even if the detail was viewed, survives restart and clears after publication", async () => {
+  const f = fixture(user({ client: true, provider: false }));
+  const request = row("client", "AWAITING_CONFIRMATION", 4);
+  f.data.push(request);
+  await sync(f);
+  f.monitor.dismiss();
+  request.status = "COMPLETED";
+  request.version = 5;
+  request.canReview = true;
+  request.reviewSubmitted = false;
+  f.monitor.viewed(request, owner);
+  await f.monitor.refresh(true);
+  await drain();
+  expect(f.monitor.state.notice?.kind).toBe("review");
+  expect(f.monitor.state.notice?.title).toBe("Avalie o atendimento");
+  f.monitor.dismiss();
+  await f.monitor.refresh();
+  await drain();
+  expect(f.monitor.state.notice).toBeNull();
+  f.monitor.setActive(false);
+  f.monitor.setActive(true);
+  await f.monitor.refresh();
+  await drain();
+  expect(f.monitor.state.notice).toBeNull();
+  request.canReview = false;
+  request.reviewSubmitted = true;
+  await f.monitor.refresh(true);
+  await drain();
+  expect(f.monitor.state.notice).toBeNull();
+  expect(JSON.stringify(f.saved.get(owner))).not.toMatch(
+    /Private|comment|phone|whatsapp/i,
+  );
+  f.monitor.dispose();
+});
+
+test("preexisting completed history has no rating backlog banner and no invitation for an already reviewed request", async () => {
+  const f = fixture(user({ client: true, provider: false }));
+  const request = {
+    ...row("client", "COMPLETED", 5),
+    canReview: true,
+    reviewSubmitted: false,
+  };
+  f.data.push(request);
+  await sync(f);
+  expect(f.monitor.state.notice).toBeNull();
+  expect(f.saved.get(owner)?.entries[0].reviewPrompted).toBe(true);
+  request.reviewSubmitted = true;
+  request.canReview = false;
+  await f.monitor.refresh(true);
+  await drain();
+  expect(f.monitor.state.notice).toBeNull();
   f.monitor.dispose();
 });

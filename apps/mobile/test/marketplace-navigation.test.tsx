@@ -99,6 +99,11 @@ beforeEach(() => {
           "NETWORK",
           "Não foi possível conectar ao catálogo.",
         );
+      if (
+        path.startsWith("reviews/providers/") ||
+        path.startsWith("provider/me/reviews")
+      )
+        return { average: null, total: 0, page: 1, pageSize: 5, items: [] };
       if (path.startsWith("catalog/categories")) return clone([category]);
       if (path.startsWith("catalog/providers?")) {
         const q = new URL("http://fixture/" + path).searchParams;
@@ -1243,7 +1248,7 @@ test("enlarged text on a narrow screen keeps every bottom destination available 
   expect(screen).toHavePathname("/provider");
 });
 
-test("professional profile and public real catalog show empty reviews without invented scores or review requests", async () => {
+test("professional profile and public real catalog query empty reviews without invented scores or publication requests", async () => {
   completeFixture();
   await providerEntry();
   await fireEvent.press(
@@ -1254,7 +1259,7 @@ test("professional profile and public real catalog show empty reviews without in
   expect(
     await screen.findByRole("header", { name: "Avaliações" }),
   ).toBeTruthy();
-  expect(screen.getByText("Ainda não há avaliações.")).toBeTruthy();
+  expect(await screen.findByText("Ainda não há avaliações.")).toBeTruthy();
   expect(
     screen.getByText(
       "Depois de realizar serviços pelo Omini, seus clientes poderão avaliar seu atendimento.",
@@ -1272,11 +1277,16 @@ test("professional profile and public real catalog show empty reviews without in
   expect(
     await screen.findByRole("header", { name: "Avaliações" }),
   ).toBeTruthy();
-  expect(screen.getByText("Ainda não há avaliações.")).toBeTruthy();
+  expect(await screen.findByText("Ainda não há avaliações.")).toBeTruthy();
   expect(screen.queryByText(/de 5 ·/)).toBeNull();
-  expect(requests.some((request) => /review|avaliac/i.test(request.path))).toBe(
-    false,
-  );
+  expect(
+    requests.some(
+      (request) => /reviews/.test(request.path) && request.method !== "GET",
+    ),
+  ).toBe(false);
+  expect(
+    requests.some((request) => request.path.startsWith("reviews/providers/")),
+  ).toBe(true);
 });
 
 test("legacy districts render as one active municipality and deactivate/reactivate together without account or Stack regressions", async () => {

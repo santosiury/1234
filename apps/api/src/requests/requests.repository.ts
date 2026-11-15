@@ -5,7 +5,10 @@ import type {
   RequestStatus,
 } from "@omini/shared";
 import type { ParsedRequestQuery } from "./validation";
-export type RequestRow = ServiceRequest;
+export type RequestRow = ServiceRequest & {
+  review?: { id: string } | null;
+  reviewEligible?: boolean;
+};
 export type EventRow = ServiceRequestEvent;
 export interface RequestActor {
   id: string;
@@ -19,7 +22,7 @@ export interface RequestTarget {
   providerName: string;
   serviceTitle: string;
 }
-export type NewRequest = Omit<RequestRow, "id">;
+export type NewRequest = Omit<ServiceRequest, "id">;
 export type NewEvent = Omit<EventRow, "id">;
 export type RequestPatch = Pick<
   RequestRow,

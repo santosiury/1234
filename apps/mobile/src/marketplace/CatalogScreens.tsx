@@ -1,5 +1,5 @@
 import { cityLocation, type CityLocation } from "@omini/shared";
-import { ReviewsSection } from "../components/ReviewsSection";
+import { ProviderReviews } from "../reviews/ProviderReviews";
 import { useCallback, useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { Redirect, router, useLocalSearchParams } from "expo-router";
@@ -281,7 +281,7 @@ function LoadedDetail({
               {person.bio || "Descrição não informada."}
             </Text>
           </View>
-          <ReviewsSection audience="public" />
+          <ProviderReviews providerId={person.id} />
           <SectionHeading title="Serviços oferecidos" />
           {person.services.map((service) => (
             <View key={service.id} style={ui.card}>

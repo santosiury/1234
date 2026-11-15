@@ -65,6 +65,12 @@ function summary(row: RequestRow, user: RequestActor): ServiceRequestSummary {
     cancelledAt: row.cancelledAt?.toISOString() ?? null,
     version: row.version,
     viewer,
+    canReview:
+      viewer === "client" &&
+      user.client &&
+      row.reviewEligible === true &&
+      !row.review,
+    reviewSubmitted: !!row.review,
     allowedActions: user[viewer]
       ? allowedRequestActions(row.status as RequestStatus, viewer)
       : [],
@@ -334,7 +340,11 @@ export class RequestsService {
         idempotencyKey: input.idempotencyKey,
         payloadHash: hash,
       });
-      return detail(tx, { ...row, ...patch }, user);
+      return detail(
+        tx,
+        { ...row, ...patch, reviewEligible: action === "confirm-completion" },
+        user,
+      );
     });
   }
 }

@@ -13,6 +13,7 @@ export interface NoticeEntry {
   status: RequestStatus;
   handled: number;
   viewed: number;
+  reviewPrompted?: boolean;
 }
 export interface NoticeBaseline {
   initialized: boolean;
@@ -75,7 +76,9 @@ function valid(v: unknown): v is NoticeLedger {
         e.handled <= e.version &&
         Number.isSafeInteger(e.viewed) &&
         e.viewed >= 0 &&
-        e.viewed <= e.version,
+        e.viewed <= e.version &&
+        (e.reviewPrompted === undefined ||
+          typeof e.reviewPrompted === "boolean"),
     )
   );
 }
@@ -144,6 +147,9 @@ export const noticeStorage: NoticeStorage = {
         status: e.status,
         handled: e.handled,
         viewed: e.viewed,
+        ...(e.reviewPrompted === undefined
+          ? {}
+          : { reviewPrompted: e.reviewPrompted }),
       })),
     };
     return serialize(owner, async () => {

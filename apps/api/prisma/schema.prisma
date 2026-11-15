@@ -26,6 +26,8 @@ model User {
   sentRequests ServiceRequest[] @relation("RequestClient")
   receivedRequests ServiceRequest[] @relation("RequestProvider")
   requestEvents ServiceRequestEvent[]
+  writtenReviews ServiceReview[] @relation("ReviewClient")
+  receivedReviews ServiceReview[] @relation("ReviewProvider")
 
   @@index([isActive, createdAt])
 }
@@ -53,6 +55,7 @@ model ProviderProfile {
   services         ProviderService[]
   serviceAreas     ProviderServiceArea[]
   requests         ServiceRequest[]
+  reviews ServiceReview[]
 
   @@index([isActive, createdAt])
 }
@@ -139,6 +142,7 @@ model RefreshToken {
 }
 
 model ServiceRequest {
+  review ServiceReview?
   id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
   clientUserId String @db.UniqueIdentifier
   providerUserId String @db.UniqueIdentifier
@@ -187,4 +191,21 @@ model ServiceRequestEvent {
   actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   @@unique([actorUserId, idempotencyKey])
   @@unique([requestId, version])
+}
+
+// One immutable, server-authored review per completed request in this phase.
+model ServiceReview {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  requestId String @unique @db.UniqueIdentifier
+  clientUserId String @db.UniqueIdentifier
+  providerUserId String @db.UniqueIdentifier
+  providerId String @db.UniqueIdentifier
+  rating Int
+  comment String? @db.NVarChar(1000)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  client User @relation("ReviewClient", fields: [clientUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  providerUser User @relation("ReviewProvider", fields: [providerUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([providerId, createdAt, id])
 }

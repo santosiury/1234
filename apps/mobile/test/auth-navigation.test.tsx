@@ -67,6 +67,15 @@ test("registration form validates, submits both profiles and logs into the same 
     "valueChange",
     true,
   );
+  await fireEvent.changeText(
+    screen.getByLabelText("Celular com DDD"),
+    "48998765432",
+  );
+  await fireEvent(
+    screen.getByLabelText("Autorizar compartilhamento após o aceite"),
+    "valueChange",
+    true,
+  );
   await fireEvent.press(screen.getByText("Criar conta"));
   expect(
     await screen.findByText(

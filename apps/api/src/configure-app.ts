@@ -12,10 +12,10 @@ export function configureApp(app: INestApplication) {
   const spec = new DocumentBuilder()
     .setTitle("Omini API")
     .setDescription(
-      "Omini · authentication, real catalog and participant-authorized service requests. Development-only database diagnostics are excluded from the public specification.",
+      "Omini · authentication, real catalog and participant-authorized service requests, private contact sharing and real completed-service reviews. Development-only database diagnostics are excluded from the public specification.",
     )
     .addBearerAuth()
-    .setVersion("0.2.4")
+    .setVersion("0.2.5")
     .build();
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, spec));
 }

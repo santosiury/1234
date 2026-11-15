@@ -20,10 +20,11 @@ const CLIENT_STATES: RequestStatus[] = [
   "REJECTED",
   "IN_PROGRESS",
   "CANCELLED",
+  "COMPLETED",
 ];
 export interface RequestNotice {
   key: string;
-  kind?: "pending";
+  kind?: "pending" | "review";
   priority?: number;
   side: RequestParticipant;
   id?: string;
@@ -316,6 +317,29 @@ export class RequestMonitor {
         entry = this.entry(row);
       if (initial || (!known && row.createdAt <= cutoff))
         entry.handled = Math.max(entry.handled, row.version);
+      if (
+        side === "client" &&
+        row.status === "COMPLETED" &&
+        row.canReview === true &&
+        !row.reviewSubmitted
+      ) {
+        if (initial || (!known && row.createdAt <= cutoff))
+          entry.reviewPrompted = true;
+        if (!entry.reviewPrompted) {
+          individual = true;
+          this.enqueue({
+            key: `review:${keyOf(entry)}`,
+            kind: "review",
+            side,
+            id: row.id,
+            version: row.version,
+            priority: 1,
+            title: "Avalie o atendimento",
+            message:
+              "Seu serviço foi concluído. Se quiser, conte como foi o atendimento. Você pode avaliar mais tarde pelo histórico.",
+          });
+        }
+      }
       if (row.createdAt > baseline.newest) baseline.newest = row.createdAt;
       if (entry.handled >= row.version || entry.viewed >= row.version) continue;
       if (side === "provider" && row.status === "REQUESTED") {
@@ -329,7 +353,11 @@ export class RequestMonitor {
           title: "Nova solicitação recebida!",
           message: "Você recebeu um novo pedido de serviço.",
         });
-      } else if (side === "client" && row.status !== "REQUESTED") {
+      } else if (
+        side === "client" &&
+        row.status !== "REQUESTED" &&
+        row.status !== "COMPLETED"
+      ) {
         individual = true;
         const titles: Partial<Record<RequestStatus, string>> = {
           ACCEPTED: "Solicitação aceita",
@@ -362,7 +390,13 @@ export class RequestMonitor {
       (n) =>
         n.side !== side ||
         !n.id ||
-        rows.some((r) => r.id === n.id && r.version === n.version),
+        rows.some(
+          (r) =>
+            r.id === n.id &&
+            r.version === n.version &&
+            (n.kind !== "review" ||
+              (r.canReview === true && !r.reviewSubmitted)),
+        ),
     );
     const pendingCount =
       side === "provider" ? totals.REQUESTED! : totals.AWAITING_CONFIRMATION!;
@@ -394,6 +428,8 @@ export class RequestMonitor {
       if (
         row &&
         (row.version !== visible.version ||
+          (visible.kind === "review" &&
+            (row.canReview !== true || row.reviewSubmitted)) ||
           (side === "provider" && row.status !== "REQUESTED"))
       )
         this.emit({ notice: null });
@@ -462,23 +498,39 @@ export class RequestMonitor {
       ) {
         const notice = this.queue.shift()!;
         const entry = notice.id
-          ? this.ledger.entries.find((e) => keyOf(e) === notice.key)
+          ? this.ledger.entries.find(
+              (e) =>
+                e.side === notice.side &&
+                e.id.toLowerCase() === notice.id!.toLowerCase(),
+            )
           : undefined;
         if (
           notice.id &&
           (!entry ||
             entry.version !== notice.version ||
-            entry.handled >= notice.version! ||
-            entry.viewed >= notice.version!)
+            (notice.kind === "review"
+              ? entry.reviewPrompted === true
+              : entry.handled >= notice.version! ||
+                entry.viewed >= notice.version!))
         )
           continue;
-        const old = entry?.handled;
-        if (entry) entry.handled = notice.version!;
+        const old = entry?.handled,
+          oldReview = entry?.reviewPrompted;
+        const restore = () => {
+          if (entry) {
+            entry.handled = old!;
+            entry.reviewPrompted = oldReview;
+          }
+        };
+        if (entry) {
+          if (notice.kind === "review") entry.reviewPrompted = true;
+          else entry.handled = notice.version!;
+        }
         try {
           await this.save(generation);
         } catch {
           if (!this.current(generation)) break;
-          if (entry) entry.handled = old!;
+          restore();
           this.queue.unshift(notice);
           this.emit({
             error:
@@ -491,7 +543,7 @@ export class RequestMonitor {
             this.user?.id === owner &&
             (!entry || this.ledger?.entries.includes(entry))
           ) {
-            if (entry) entry.handled = old!;
+            restore();
             this.queue.unshift(notice);
             if (this.ledger && owner)
               void this.storage
@@ -501,7 +553,7 @@ export class RequestMonitor {
           break;
         }
         if (!this.allowed) {
-          if (entry) entry.handled = old!;
+          restore();
           this.queue.unshift(notice);
           await this.save(generation).catch(() => {
             if (this.current(generation))
@@ -512,7 +564,12 @@ export class RequestMonitor {
           });
           break;
         }
-        if (entry && entry.viewed >= notice.version!) continue;
+        if (
+          entry &&
+          notice.kind !== "review" &&
+          entry.viewed >= notice.version!
+        )
+          continue;
         this.emit({ notice });
       }
     } finally {
@@ -572,12 +629,18 @@ export class RequestMonitor {
     }
     this.queue = this.queue.filter(
       (n) =>
-        n.id !== row.id || n.side !== row.viewer || n.version! > row.version,
+        n.id !== row.id ||
+        n.side !== row.viewer ||
+        n.version! > row.version ||
+        (n.kind === "review" && row.canReview === true && !row.reviewSubmitted),
     );
     if (
       this.state.notice?.id === row.id &&
       this.state.notice.side === row.viewer &&
-      this.state.notice.version! <= row.version
+      this.state.notice.version! <= row.version &&
+      (this.state.notice.kind !== "review" ||
+        row.canReview !== true ||
+        row.reviewSubmitted)
     )
       this.dismiss();
   };

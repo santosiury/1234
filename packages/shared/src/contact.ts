@@ -12,6 +12,11 @@ export function normalizeBrazilMobile(value: string): string | null {
   )
     return null;
   let digits = value.replace(/\D/g, "");
+  if (
+    value.startsWith("+") &&
+    (digits.length !== 13 || !digits.startsWith("55"))
+  )
+    return null;
   if (digits.length === 13 && digits.startsWith("55")) digits = digits.slice(2);
   if (
     !/^\d{2}9\d{8}$/.test(digits) ||

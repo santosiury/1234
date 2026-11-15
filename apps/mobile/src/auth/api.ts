@@ -32,7 +32,8 @@ function isUser(value: unknown): value is AuthUser {
     typeof user.displayName === "string" &&
     typeof user.email === "string" &&
     typeof user.profiles?.client === "boolean" &&
-    typeof user.profiles?.provider === "boolean"
+    typeof user.profiles?.provider === "boolean" &&
+    (user.contactReady === undefined || typeof user.contactReady === "boolean")
   );
 }
 function tokens(value: unknown): AuthTokens {

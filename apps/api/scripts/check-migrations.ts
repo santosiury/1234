@@ -28,6 +28,29 @@ async function main() {
     ),
     ["ServiceRequest", "ServiceRequestEvent"],
   );
+  await validateInitialMigration(
+    current,
+    await readFile(
+      "prisma/migrations/20261115010000_service_reviews/migration.sql",
+      "utf8",
+    ),
+    ["ServiceReview"],
+  );
+  const contactSql = await readFile(
+    "prisma/migrations/20261115000000_customer_contact/migration.sql",
+    "utf8",
+  );
+  if (
+    !/ALTER TABLE \[dbo\]\.\[User\] ADD \[hasWhatsapp\] BIT NOT NULL/.test(
+      contactSql,
+    ) ||
+    !/\[phoneShareConsentedAt\] DATETIME2 NULL/.test(contactSql) ||
+    /(?:DROP|DELETE|TRUNCATE|UPDATE|INSERT|MERGE)\s+(?:INTO |FROM )?\[dbo\]/i.test(
+      contactSql,
+    )
+  )
+    throw Error("Contact migration must remain additive");
+  console.log("Contact and review SQL contracts passed; no SQL was executed.");
   console.log("Incremental requests SQL contract passed; no SQL was executed.");
   console.log(
     "Incremental authentication SQL contract passed; no SQL was executed.",

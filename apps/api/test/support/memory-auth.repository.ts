@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { AuthUser, ExperienceMode, RegisterInput } from "@omini/shared";
+import { ApiError } from "../../src/api-error";
+import type {
+  AuthUser,
+  ContactInput,
+  ExperienceMode,
+  RegisterInput,
+} from "@omini/shared";
 import {
   AuthRepository,
   CredentialRecord,
@@ -8,6 +14,7 @@ import {
 } from "../../src/auth/auth.repository";
 // Test double only: production uses SQL Server through PrismaAuthRepository.
 export class MemoryAuthRepository extends AuthRepository {
+  contacts = new Map<string, ContactInput>();
   users = new Map<string, CredentialRecord>();
   sessions = new Map<string, SessionRecord & { revoked: boolean }>();
   refreshTokens = new Map<
@@ -27,6 +34,7 @@ export class MemoryAuthRepository extends AuthRepository {
         provider: input.profiles.includes("provider"),
       },
     };
+    if (input.contact) this.contacts.set(user.id, input.contact);
     this.users.set(input.email, { user, passwordHash, active: true });
   }
   async credential(email: string) {
@@ -96,6 +104,8 @@ export class MemoryAuthRepository extends AuthRepository {
       (value) => value.user.id === userId && value.active,
     );
     if (!record || this.blocked.has(role)) return null;
+    if (role === "client" && !record.user.contactReady)
+      throw new ApiError(400, "CONTACT_REQUIRED", "Atualize o contato.");
     record.user.profiles[role] = true;
     return record.user;
   }

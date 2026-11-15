@@ -21,6 +21,7 @@ const routes = [
   "provider/requests/index",
   "provider/requests/[id]",
   "service-request/new",
+  "service-review/[id]",
   "service-request/resume",
   "provider/account",
   "provider/services/_layout",

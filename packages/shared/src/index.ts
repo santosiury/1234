@@ -231,6 +231,8 @@ export interface ServiceRequestSummary {
   version: number;
   viewer: RequestParticipant;
   allowedActions: RequestAction[];
+  canReview?: boolean;
+  reviewSubmitted?: boolean;
 }
 export interface RequestEventView {
   id: string;
@@ -262,4 +264,27 @@ export function hasPrivateRequestData(value: string): boolean {
   return /[\w.+-]+@[\w.-]+\.[a-z]{2,}|(?:\d[\s()./-]*){8,}|https?:\/\/|\b(?:rua|avenida|av\.?|travessa|rodovia|estrada)\s+[^\n]{0,80}\b\d+/iu.test(
     value,
   );
+}
+
+export interface CreateReviewInput {
+  rating: number;
+  comment?: string | null;
+}
+export interface PublishedReview {
+  id: string;
+  rating: 1 | 2 | 3 | 4 | 5;
+  comment: string | null;
+  createdAt: string;
+  authorLabel: string;
+}
+export interface RequestReview {
+  canReview: boolean;
+  review: PublishedReview | null;
+}
+export interface ReviewsPage {
+  average: number | null;
+  total: number;
+  page: number;
+  pageSize: number;
+  items: PublishedReview[];
 }

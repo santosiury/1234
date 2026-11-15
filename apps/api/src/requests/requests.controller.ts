@@ -66,6 +66,8 @@ const summary = {
     cancelledAt: { type: "string", format: "date-time", nullable: true },
     version: { type: "integer" },
     viewer: { type: "string", enum: ["client", "provider"] },
+    canReview: { type: "boolean" },
+    reviewSubmitted: { type: "boolean" },
     allowedActions: {
       type: "array",
       items: { type: "string", enum: [...REQUEST_ACTIONS] },

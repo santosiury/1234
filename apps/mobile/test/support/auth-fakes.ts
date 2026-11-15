@@ -11,6 +11,7 @@ export const user: AuthUser = {
   displayName: "Pessoa Teste",
   email: "pessoa@example.test",
   profiles: { client: true, provider: false },
+  contactReady: true,
 };
 export const refreshValue = (n: number) => String(n).padStart(43, "x");
 export function tokenPair(n: number, value: AuthUser = user): AuthTokens {

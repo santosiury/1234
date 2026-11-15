@@ -2,13 +2,14 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { PrimaryButton, ui } from "./ui";
 import { theme } from "../theme";
 
-// Presentation types only. A future authenticated/public API adapter supplies published data.
+// Presentation only; real published records are supplied by the API adapter.
 export type ReviewRating = 1 | 2 | 3 | 4 | 5;
 export interface ReviewCommentView {
   id: string;
   authorLabel: string;
   rating: ReviewRating;
   comment?: string | null;
+  createdAt?: string;
 }
 export type ReviewsViewState =
   | { status: "unavailable" | "empty" }
@@ -23,7 +24,7 @@ export type ReviewsViewState =
     };
 const unavailable: ReviewsViewState = { status: "unavailable" };
 
-/** No fetch, calculation or invented reputation: current callers deliberately use unavailable. */
+/** No fetch or invented reputation. Empty results never show a score. */
 export function ReviewsSection({
   audience = "owner",
   state = unavailable,
@@ -96,6 +97,11 @@ function ReviewComment({ review }: { review: ReviewCommentView }) {
       <Text style={ui.text}>
         {review.authorLabel} · {review.rating} de 5
       </Text>
+      {!!review.createdAt && (
+        <Text style={ui.small}>
+          {new Date(review.createdAt).toLocaleDateString("pt-BR")}
+        </Text>
+      )}
       {!!review.comment && <Text style={ui.small}>{review.comment}</Text>}
     </View>
   );

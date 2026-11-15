@@ -1,4 +1,4 @@
-import { ReviewsSection } from "../components/ReviewsSection";
+import { ProviderReviews } from "../reviews/ProviderReviews";
 import { Text, View } from "react-native";
 import { router } from "expo-router";
 import {
@@ -151,7 +151,7 @@ export function ProviderProfileOverview() {
               router.push("/provider/profile/edit", { withAnchor: true })
             }
           />
-          <ReviewsSection />
+          <ProviderReviews providerId={result.data.id} own />
         </>
       )}
       <ActionRow

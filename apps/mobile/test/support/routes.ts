@@ -33,6 +33,7 @@ import * as SentLayout from "../../app/client/requests/_layout";
 import * as ReceivedLayout from "../../app/provider/requests/_layout";
 import SentDetail from "../../app/client/requests/[id]";
 import ReceivedDetail from "../../app/provider/requests/[id]";
+import ReviewScreen from "../../app/service-review/[id]";
 import NewRequest from "../../app/service-request/new";
 import ResumeRequest from "../../app/service-request/resume";
 export const routes = {
@@ -51,6 +52,7 @@ export const routes = {
   "provider/requests/_layout": ReceivedLayout,
   "provider/requests/index": Received,
   "provider/requests/[id]": ReceivedDetail,
+  "service-review/[id]": ReviewScreen,
   "service-request/new": NewRequest,
   "service-request/resume": ResumeRequest,
   "provider/account": ProfessionalAccount,

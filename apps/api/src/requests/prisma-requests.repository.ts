@@ -1,9 +1,45 @@
 import { contactReady } from "@omini/shared";
 import { Inject, Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Prisma, type ServiceRequest } from "@prisma/client";
 import { PrismaService } from "../persistence/prisma.service";
 import { RequestsRepository, type RequestsTx } from "./requests.repository";
 
+const include = {
+  review: { select: { id: true } },
+  events: {
+    where: {
+      action: "confirm-completion",
+      newStatus: "COMPLETED",
+      previousStatus: "AWAITING_CONFIRMATION",
+    },
+    orderBy: { version: "desc" as const },
+    take: 1,
+    select: { actorUserId: true, version: true, occurredAt: true },
+  },
+} as const;
+function project(
+  row:
+    | (ServiceRequest & {
+        review: { id: string } | null;
+        events: { actorUserId: string; version: number; occurredAt: Date }[];
+      })
+    | null,
+) {
+  if (!row) return null;
+  const { events, ...rest } = row;
+  return {
+    ...rest,
+    reviewEligible:
+      row.status === "COMPLETED" &&
+      !!row.completedAt &&
+      events.some(
+        (e) =>
+          e.actorUserId.toLowerCase() === row.clientUserId.toLowerCase() &&
+          e.version === row.version &&
+          e.occurredAt.getTime() === row.completedAt!.getTime(),
+      ),
+  };
+}
 @Injectable()
 export class PrismaRequestsRepository extends RequestsRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {
@@ -73,14 +109,21 @@ export class PrismaRequestsRepository extends RequestsRepository {
                 actorUserId_idempotencyKey: { actorUserId, idempotencyKey },
               },
             }),
-          byKey: (clientUserId, idempotencyKey) =>
-            db.serviceRequest.findUnique({
-              where: {
-                clientUserId_idempotencyKey: { clientUserId, idempotencyKey },
-              },
-            }),
-          get: (id) => db.serviceRequest.findUnique({ where: { id } }),
-          insert: (data) => db.serviceRequest.create({ data }),
+          byKey: async (clientUserId, idempotencyKey) =>
+            project(
+              await db.serviceRequest.findUnique({
+                include,
+                where: {
+                  clientUserId_idempotencyKey: { clientUserId, idempotencyKey },
+                },
+              }),
+            ),
+          get: async (id) =>
+            project(
+              await db.serviceRequest.findUnique({ where: { id }, include }),
+            ),
+          insert: async (data) =>
+            project(await db.serviceRequest.create({ data, include }))!,
           append: (data) => db.serviceRequestEvent.create({ data }),
           patch: async (id, status, version, data) =>
             (
@@ -104,12 +147,15 @@ export class PrismaRequestsRepository extends RequestsRepository {
             };
             return {
               total: await db.serviceRequest.count({ where }),
-              items: await db.serviceRequest.findMany({
-                where,
-                skip: (query.page - 1) * query.pageSize,
-                take: query.pageSize,
-                orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-              }),
+              items: (
+                await db.serviceRequest.findMany({
+                  include,
+                  where,
+                  skip: (query.page - 1) * query.pageSize,
+                  take: query.pageSize,
+                  orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+                })
+              ).map((row) => project(row)!),
             };
           },
         }),

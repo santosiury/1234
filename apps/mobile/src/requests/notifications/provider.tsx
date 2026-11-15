@@ -82,6 +82,7 @@ export function noticeHiddenOnPath(path: string) {
   return (
     path.endsWith("/edit") ||
     path.startsWith("/service-request/") ||
+    path.startsWith("/service-review/") ||
     /\/provider-setup\/(?:service|area|profile)$/.test(path) ||
     path === "/login" ||
     path === "/register"

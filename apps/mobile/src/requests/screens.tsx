@@ -1,3 +1,5 @@
+import { RequestReviewPanel } from "../reviews/RequestReviewPanel";
+import { useMonitorRefresh } from "./useMonitorRefresh";
 import { RequestContactPanel } from "../contact/RequestContactPanel";
 import { useRequestUpdates, updateMessage } from "./notifications/provider";
 import { useRequestsApi, RequestRoleGate } from "./access";
@@ -48,32 +50,6 @@ const errorMessage = (error: unknown) =>
   error instanceof AuthFailure
     ? error.message
     : "Não foi possível concluir. Tente novamente.";
-// A single monitor drives automatic refreshes; retained Stack screens do no extra work.
-function useMonitorRefresh(
-  reload: () => void,
-  revision: number,
-  enabled = true,
-) {
-  const focused = useRef(false),
-    handled = useRef(revision),
-    latest = useRef(revision);
-  latest.current = revision;
-  useFocusEffect(
-    useCallback(() => {
-      focused.current = true;
-      handled.current = latest.current;
-      return () => {
-        focused.current = false;
-      };
-    }, []),
-  );
-  useEffect(() => {
-    if (enabled && focused.current && handled.current !== revision) {
-      handled.current = revision;
-      reload();
-    }
-  }, [reload, revision, enabled]);
-}
 function listPath(side: RequestParticipant) {
   return side === "client" ? "/client/requests" : "/provider/requests";
 }
@@ -253,7 +229,8 @@ const actions: Record<
   accept: {
     title: "Aceitar",
     confirmation: "Aceitar solicitação?",
-    description: "Você poderá iniciar o atendimento quando estiver pronto.",
+    description:
+      "Ao aceitar, você demonstra interesse em atender e libera a consulta do contato autorizado. Combine o atendimento diretamente com o cliente antes de iniciar. Não há confirmação de preço pelo Omini.",
   },
   reject: {
     title: "Recusar",
@@ -265,7 +242,7 @@ const actions: Record<
     title: "Iniciar atendimento",
     confirmation: "Iniciar atendimento?",
     description:
-      "Após o início, o cancelamento não estará disponível nesta etapa.",
+      "Combine o atendimento com o cliente antes de iniciar. Após o início, o cancelamento não estará disponível nesta etapa.",
   },
   "propose-completion": {
     title: "Informar conclusão",
@@ -464,6 +441,9 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
               Enviada em {requestDate(row.createdAt)}
             </Text>
           </View>
+          {row.status === "COMPLETED" && (
+            <RequestReviewPanel id={row.id} version={row.version} />
+          )}
           {row.viewer === "provider" && (
             <RequestContactPanel id={row.id} status={row.status} />
           )}
