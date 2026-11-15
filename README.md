@@ -1,6 +1,10 @@
-# Omini · Solicitações e contratação direta (Fase 2.4)
+# Omini · Contato privado e avaliações reais (Fase 2.5)
 
-Marketplace mobile de serviços para Araranguá, SC. Cliente solicita um serviço do catálogo real; prestador aceita, inicia e informa a conclusão; cliente confirma ou reabre com motivo. Sessão segura e experiências de cliente/prestador preservadas. Sem pagamentos, chat ou avaliações funcionais.
+Marketplace mobile de serviços para Araranguá, SC. Cliente solicita um serviço do catálogo real; prestador aceita, inicia e informa a conclusão; cliente confirma ou reabre com motivo. Sessão segura e experiências de cliente/prestador preservadas. Contato liberado somente ao prestador destinatário após aceite e avaliações reais após conclusão. Sem pagamentos ou chat interno.
+
+**Modelo de negócio: assinatura mensal de prestadores.** O Omini não cobra comissão, não administra orçamentos e não processa pagamentos dos serviços. Planos e assinaturas serão implementados em outra fase.
+
+**Atualização atual:** [Fase 2.5 — implantação segura, migrations/GRANTs e roteiro no iPhone/Samsung](docs/fase-2-5-contato-avaliacoes.md). [Resultados e arquivos modificados](docs/fase-2-5-validacao.md). Preserve as credenciais existentes; o responsável deve revisar e validar as migrations em instância isolada antes da aplicação real.
 
 **Atualização: cobertura por cidade e UF.** O responsável informou que a migration e as permissões da Fase 2.4 já foram aplicadas. A correção atual remove bairro como cobertura/filtro e elimina a repetição de localização na contratação; não requer migration nem GRANT. Siga [compatibilidade legada, atualização no Windows e roteiro no iPhone](docs/cobertura-cidade-uf.md). O [guia original da Fase 2.4](docs/fase-2-4-solicitacoes.md) contém a arquitetura e o SQL histórico; as regras de bairro foram substituídas pelo novo guia.
 
@@ -12,7 +16,7 @@ Refinamento da experiência em `feature/fase-2-3-ux-prestador`, baseado em `ddf3
 
 Correção de navegação: o prestador agora usa uma Stack com painel, seções e formulários, além de acesso direto pela conta e home. Veja [hierarquia, testes e roteiro no iPhone](docs/correcao-navegacao-prestador.md).
 
-Barra inferior profissional e avaliações visuais: [organização, arquivos e teste no iPhone](docs/navegacao-inferior-avaliacoes-visuais.md). A Stack e os três cards aprovados são preservados; avaliações continuam sem dados ou backend. A [proposta bidirecional futura](docs/avaliacoes-bidirecionais.md) depende da Fase 2.4 concluída.
+Barra inferior profissional e avaliações visuais: [organização, arquivos e teste no iPhone](docs/navegacao-inferior-avaliacoes-visuais.md). A Stack e os três cards aprovados são preservados; o estado vazio daquela entrega foi integrado a dados reais na Fase 2.5. A [proposta bidirecional futura](docs/avaliacoes-bidirecionais.md) trata somente evoluções além do cliente avaliando o prestador.
 
 Atualização de avisos internos: contador profissional de pedidos aguardando resposta, indicador de confirmação para clientes e banners discretos com o app ativo. [Arquitetura, limites, Windows/iPhone e plano futuro de push](docs/notificacoes-omini.md). Não há push remoto com o app fechado, nova dependência ou alteração de banco nesta entrega.
 
@@ -25,7 +29,10 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
     app/provider/              # Stack profissional; seções e formulários aninhados
     app/provider-setup/        # aliases dos antigos endereços profissionais
     app/service-request/       # formulário/revisão e retomada autenticada
-    src/requests/              # solicitações reais, histórico e diário seguro
+    src/requests/              # solicitações reais, histórico, monitor e diário seguro
+    src/contact/               # celular privado e linking autorizado
+    src/reviews/               # publicação e reputação paginada
+    app/service-review/        # formulário com proteção de saída
     app/professional/[id].tsx   # detalhes com retorno
     src/components/            # componentes e identidade visual
     src/demo/                  # catálogo fictício, somente no modo demonstrativo
@@ -33,6 +40,8 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
     test/                      # testes de navegação e busca
   apps/api/                    # NestJS 11, REST e Swagger
     src/requests/              # domínio transacional, autorização e idempotência
+    src/contact/               # contato privado e consentimento
+    src/reviews/               # avaliações imutáveis de serviços concluídos
     src/health/                # módulo de liveness
     src/marketplace/            # perfil, serviços, áreas e busca pública SQL Server
     prisma/                    # schema sqlserver, migrations incrementais e seed
@@ -44,7 +53,7 @@ omini/                         # raiz do checkout (pasta 1234 na nuvem)
 
 ## Windows / PowerShell
 
-Para atualizar a instalação existente em `C:\projetos\omini`, siga [cobertura cidade/UF — atualização e teste no iPhone](docs/cobertura-cidade-uf.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
+Para atualizar a instalação existente em `C:\projetos\omini`, siga [Fase 2.5 — Windows, SQL e teste nos aparelhos](docs/fase-2-5-contato-avaliacoes.md). Preserve as credenciais locais. Se ainda não configurou a autenticação anterior, consulte [o guia da Fase 2.2](docs/fase-2-2-autenticacao.md). As instruções abaixo para clone novo permitem explorar o modo demonstrativo; o catálogo real exige persistência habilitada.
 
 Para atualizar um clone existente da Fase 1, siga [atualização para SDK 58 e validação no iPhone](docs/expo-sdk-58.md). Os comandos abaixo também permitem uma instalação nova.
 
@@ -53,7 +62,7 @@ Instale Git e Node.js **22 LTS >=22.13** (ou Node 24 LTS >=24.3). Use npm; não 
 ```powershell
 git clone https://github.com/santosiury/1234.git omini
 cd omini
-git switch feature/fase-2-4-solicitacoes
+git switch feature/fase-2-5-contato-avaliacoes
 npm ci
 Copy-Item apps/api/.env.example apps/api/.env
 Copy-Item apps/mobile/.env.example apps/mobile/.env

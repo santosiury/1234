@@ -1,6 +1,6 @@
 # Proposta futura: avaliações bidirecionais
 
-**Especificação para depois da conclusão real das solicitações na Fase 2.4. Não implementada nesta entrega.** Não existem novos endpoints, tabelas, migrations, cálculos de reputação ou regras de avaliação em execução. As estruturas de avaliação abaixo continuam propostas; a vinculação usa agora o domínio de solicitações implementado na Fase 2.4, ainda pendente de aplicação revisada no banco e validação física.
+**Evolução futura além da Fase 2.5.** Cliente → prestador já está implementado em `ServiceReview`, com publicação única, imediata e imutável após conclusão real. Veja [contratos, política vigente e implantação](fase-2-5-contato-avaliacoes.md). A direção prestador → cliente, publicação simultânea/por prazo, moderação e disputas descritas abaixo continuam propostas, não funcionalidades disponíveis. A Fase 2.4 já foi validada pelo responsável em iPhone e Samsung; a Fase 2.5 ainda depende de revisão SQL e validação física.
 
 ## Condições para iniciar
 

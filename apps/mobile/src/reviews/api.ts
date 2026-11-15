@@ -53,11 +53,23 @@ export class ReviewsApi {
   constructor(
     private readonly manager: SessionManager,
     private readonly http = new MarketplaceHttp(),
+    private readonly ownerId = manager.state.user?.id,
   ) {}
+  private authorized<T>(operation: (token: string) => Promise<T>): Promise<T> {
+    return this.manager.request((token) => {
+      if (this.manager.state.user?.id !== this.ownerId)
+        throw new AuthFailure(
+          403,
+          "ACCOUNT_CHANGED",
+          "A conta mudou. Abra esta tela novamente.",
+        );
+      return operation(token);
+    });
+  }
   async page(providerId: string, page = 1, own = false) {
     const path = `${own ? "provider/me/reviews" : `reviews/providers/${encodeURIComponent(providerId)}`}?page=${page}&pageSize=5`;
     return own
-      ? this.manager.request(async (token) =>
+      ? this.authorized(async (token) =>
           parse(
             await this.http.request(path, "GET", undefined, token),
             reviewsPage,
@@ -66,7 +78,7 @@ export class ReviewsApi {
       : parse(await this.http.request(path), reviewsPage);
   }
   request(id: string) {
-    return this.manager.request(async (token) =>
+    return this.authorized(async (token) =>
       parse(
         await this.http.request(
           `reviews/requests/${encodeURIComponent(id)}`,
@@ -87,7 +99,7 @@ export class ReviewsApi {
     );
   }
   create(id: string, input: CreateReviewInput) {
-    return this.manager.request(async (token) =>
+    return this.authorized(async (token) =>
       parse(
         await this.http.request(
           `reviews/requests/${encodeURIComponent(id)}`,

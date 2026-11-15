@@ -33,7 +33,10 @@ export function formatBrazilMobile(value: string): string {
   return `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`;
 }
 export function maskBrazilMobile(value: string): string {
-  const n = value.replace(/\D/g, "").slice(0, 11);
+  if (!/^\+?[\d ()-]*$/.test(value)) return "";
+  let digits = value.replace(/\D/g, "");
+  if (digits.length === 13 && digits.startsWith("55")) digits = digits.slice(2);
+  const n = digits.slice(0, 11);
   return n.length > 7
     ? `(${n.slice(0, 2)}) ${n.slice(2, 7)}-${n.slice(7)}`
     : n.length > 2

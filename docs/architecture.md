@@ -8,3 +8,7 @@
 - API NestJS modular. Health não conecta no banco; Swagger usa o mesmo caminho prefixado. Configuração validada antes de abrir porta. CORS por lista explícita; exceções inesperadas retornam mensagem genérica.
 - Prisma 6.19.3 com seis entidades de negócio preservadas e três tabelas incrementais de autenticação, migrations e seed de categorias, conforme [Fase 2.1](fase-2-1-persistencia.md). Runtime MSSQL JS opcional; a API não executa migrations e não exige banco em modo demonstrativo.
 - Sem infraestrutura de produção nesta fase. A Fase 2.2 adiciona autenticação, sessão e perfis conforme [guia específico](fase-2-2-autenticacao.md). Não implementa contratação, pagamentos, avaliações, push ou geolocalização.
+
+## Evolução Fase 2.5
+
+[Contato privado e avaliações reais](fase-2-5-contato-avaliacoes.md): módulos Contact/Reviews usam a persistência SQL Server existente, sem trocar autenticação ou sessão. `User` recebe flags de WhatsApp/consentimento e `ServiceReview` recebe publicações imutáveis por solicitação concluída. O monitor existente notifica o convite opcional; reputação pública e do proprietário é agregada no backend. Monetização será assinatura mensal de prestadores, sem comissão/orçamento/pagamento de serviços; assinaturas não estão implementadas.

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  maskBrazilMobile,
   normalizeBrazilMobile,
   formatBrazilMobile,
   contactLinks,
@@ -43,6 +44,8 @@ test("Brazil mobile validates DDD and normalizes international/formatted nationa
   ])
     assert.equal(normalizeBrazilMobile(phone), null);
   assert.equal(formatBrazilMobile("+5548998765432"), valid.phone);
+  assert.equal(maskBrazilMobile("+5548998765432"), valid.phone);
+  assert.equal(maskBrazilMobile("https://wa.me/5548998765432"), "");
 });
 test("client registration requires mobile, WhatsApp choice and explicit consent; provider-only remains available", () => {
   assert.throws(() => parseInput(registerSchema, registration));

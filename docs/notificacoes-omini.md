@@ -162,3 +162,7 @@ Contadores de ação devem continuar derivados dos estados reais. Separar notifi
 Auditar enfileiramento, destinatário autorizado, tentativa, resultado e motivo de descarte com IDs correlacionáveis e retenção limitada. Medir latência após commit, retries, falhas permanentes, backlog, tokens inválidos e conversão em ação, sem expor tokens/conteúdo privado. Segregar credenciais e painéis por ambiente; limitar acesso operacional e documentar resposta a incidentes.
 
 Testar autorização/IDOR, instalação sob conta errada, logout, rotação, preferências/recusa, transação revertida sem envio, retries idempotentes, workers concorrentes, invalidação de tokens, foreground/background/app fechado, vários dispositivos, deduplicação push/polling e deep link com sessão expirada. Validar APNs/FCM com development builds e dispositivos reais antes de prometer esse comportamento ao usuário.
+
+## Evolução na Fase 2.5
+
+O mesmo monitor inclui consultas a COMPLETED (até oito leituras por ciclo para conta com dois perfis) e um convite opcional de avaliação, sem novo timer/push. Metadado opcional `reviewPrompted` é compatível com o ledger v1, sem telefone, comentários ou conteúdo de solicitações. Não reapresenta convite por simples leitura e não cria backlog de avaliações antigas. Publicação dispara refresh; telas de reputação consultam ao foco e pela revisão do monitor ativo. Veja [política e limites vigentes](fase-2-5-contato-avaliacoes.md).

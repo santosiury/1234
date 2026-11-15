@@ -30,9 +30,21 @@ export class ContactApi {
   constructor(
     private readonly manager: SessionManager,
     private readonly http = new MarketplaceHttp(),
+    private readonly ownerId = manager.state.user?.id,
   ) {}
+  private authorized<T>(operation: (token: string) => Promise<T>): Promise<T> {
+    return this.manager.request((token) => {
+      if (this.manager.state.user?.id !== this.ownerId)
+        throw new AuthFailure(
+          403,
+          "ACCOUNT_CHANGED",
+          "A conta mudou. Abra esta tela novamente.",
+        );
+      return operation(token);
+    });
+  }
   own() {
-    return this.manager.request(
+    return this.authorized(
       async (token) =>
         parse(
           await this.http.request("me/contact", "GET", undefined, token),
@@ -41,7 +53,7 @@ export class ContactApi {
     );
   }
   update(input: ContactInput) {
-    return this.manager.request(
+    return this.authorized(
       async (token) =>
         parse(
           await this.http.request("me/contact", "PATCH", input, token),
@@ -50,7 +62,7 @@ export class ContactApi {
     );
   }
   request(id: string, signal?: AbortSignal) {
-    return this.manager.request(
+    return this.authorized(
       async (token) =>
         parse(
           await this.http.request(
