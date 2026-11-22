@@ -1,6 +1,6 @@
 # Omini — Especificação proposta da Fase 2.6
 
-Status: **escopo funcional atualizado e aprovado pelo responsável em 21/11/2026 (inclui avaliações bidirecionais); implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
+Status: **escopo funcional aprovado pelo responsável em 21/11/2026: encerramento motivado, reputação visual, avaliação bidirecional e notificações push remotas; implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
 
 Base técnica: continuidade da branch `feature/fase-2-5-contato-avaliacoes` (NestJS + Prisma/SQL Server, React Native/Expo SDK 58). Omini mantém contratação direta entre cliente e prestador; sem comissão, gerenciamento de orçamentos ou pagamentos dos serviços. A Fase 2.5 deve ser concluída e revista antes do rollout.
 
@@ -16,7 +16,7 @@ Na Fase 2.5, `cancel` é permitido somente ao **cliente** em `REQUESTED` e `ACCE
 - Motivo aprovado/selecionado na prévia: **“Não chegamos a um acordo sobre o valor”**. Ele deve existir como **primeira opção**; no formulário real, não pré-selecionar motivo, para assegurar escolha consciente.
 - Exigir confirmação explícita antes de registrar a transição, com aviso de que o atendimento será encerrado, não concluído.
 - Registrar ator, motivo estruturado, texto complementar quando aplicável e data/hora confiável em histórico acessível aos participantes. Não disponibilizar motivo ou relato em catálogo e avaliações públicas.
-- Notificar/atualizar a outra parte **pelos mecanismos de atualização existentes**, sem pressupor push remoto.
+- Notificar/atualizar a outra parte pelos mecanismos existentes e, quando houver permissão/instalação compatível, pelo novo fluxo push da Fase 2.6. A conclusão da transição não pode depender de entrega push.
 - Ao encerrar: impedir novas consultas ao telefone, remover botões WhatsApp/Ligar, preservar histórico e impedir novas avaliações para solicitações não concluídas. Não apagar contato que a outra pessoa já obteve fora do app.
 - Manter `COMPLETED` exclusivo para confirmação real de conclusão pelo cliente. Não converter encerramento por desacordo em `COMPLETED`, não gerar evento fictício de conclusão e não afetar avaliações históricas válidas.
 
@@ -106,13 +106,47 @@ A avaliação cliente → prestador da Fase 2.5 é publicada imediatamente. Para
 - Testar duas avaliações distintas da mesma solicitação concluída (uma por parte), reenvio idempotente, tentativa de alterar nota (409), outra conta (404/403 seguro), status inválido e término sem acordo; ausência de dados pessoais nas respostas.
 - Testar iPhone/Android, mudança de conta, sessão expirada, rede instável, repetição de toque e nenhum envio duplicado.
 
-## 4. Sequência e critérios de entrega
+## 4. Notificações push remotas — aplicativo aberto, segundo plano e fechado
+
+### Escopo aprovado
+Implementar **notificações push reais** para cliente e prestador quando o Omini estiver em primeiro plano, em segundo plano ou fechado, sujeitas a permissões e às condições dos sistemas operacionais/rede. O usuário **não precisa manter o aplicativo aberto** para receber notificações elegíveis. A entrega é de melhor esforço — Apple/Google/provedor de push podem atrasar ou não entregar mensagens; não prometer chegada instantânea ou exatamente uma vez.
+
+Eventos iniciais de notificação:
+- **Prestador**: nova solicitação recebida; cancelamento/encerramento motivado pelo cliente; confirmação de conclusão ou reabertura pelo cliente quando relevante.
+- **Cliente**: solicitação aceita ou recusada; prestador informou conclusão e aguarda confirmação; atendimento encerrado pelo prestador; outras mudanças com ação necessária.
+- **Avaliações**: informar convite de avaliação após conclusão, sem revelar se/como a outra parte avaliou quando a política de avaliações seladas for adotada; nunca enviar nota ou comentário privado no push.
+- Não enviar push inútil para cada polling, nem notificar ao destinatário sobre a própria ação. Preservar os banners e contadores internos existentes como mecanismo complementar e fallback.
+
+### Aplicativo (Expo SDK 58)
+- Integrar `expo-notifications` seguindo a matriz de compatibilidade vigente, usando **development build / EAS** e aparelhos físicos para testes de push remoto; **não pressupor funcionamento no Expo Go**, especialmente para notificações com o app fechado.
+- Solicitar permissão em contexto, sem impedir o uso se negada. Disponibilizar preferências de notificação por tipo e opção de desativar. Respeitar configurações do sistema, sem insistir em permissão negada.
+- Integrar APNs (iOS) e FCM (Android) conforme as credenciais e capacidades do projeto. Credenciais de envio privadas no serviço/backend ou EAS, nunca em Git, `EXPO_PUBLIC_*` ou logs.
+- Toque na notificação abre a solicitação correta **somente após restauração de sessão e checagem de autorização na API**. Um deep link não pode expor telefone, descrição, contato, comentário ou informações de outra conta na tela bloqueada.
+
+### Backend e persistência
+- API autenticada de registro/atualização/revogação de instalações/tokens, vinculando cada token à identidade da sessão. Suportar múltiplos aparelhos; revogar/suspender associação ao sair da conta ou trocar de usuário. Evitar armazenamento e logs de tokens completos.
+- **Outbox transacional** ligada a `ServiceRequestEvent` e à identidade real do destinatário, gravada na mesma transação da mudança de status. Enviar **somente após commit**, por worker/fila persistente; nunca disparar rede de dentro da transação SQL.
+- Usar IDs idempotentes por evento/destinatário/instalação, tentativas limitadas, backoff, tratamento de tokens inválidos, auditoria mínima e verificações de preferências antes do envio. Deduplicar apresentação com avisos internos; recebimento não significa leitura nem resolução.
+- Propor migrations **aditivas e revisadas** de tokens/instalações, preferências e outbox no SQL Server, com FKs `NoAction`, horários UTC e privilégios runtime/worker mínimos.
+- Priorizar corpo genérico: por exemplo, **"Você tem uma nova solicitação no Omini"** e **"Seu atendimento foi atualizado"**, sem dados pessoais ou nomes de clientes/profissionais no payload de bloqueio.
+
+### Critérios de aceite
+- Prestador recebe notificação de novo pedido com o app fechado, cliente recebe aviso após aceite e pedido de confirmação, conforme permissão e conectividade do dispositivo; confirmar em **iPhone e Android físicos usando builds compatíveis**.
+- Tocar uma notificação leva ao atendimento certo sem troca silenciosa de perfil e sem expor dados de outra conta.
+- Usuário que não concede permissão continua utilizando o Omini normalmente e recebendo avisos internos ao abrir.
+- Logout/troca de conta, dois dispositivos, token expirado, rede intermitente, retries e workers concorrentes não vazam conteúdo ou multiplicam eventos lógicos.
+- Um atendimento concluído/encerrado não deve reaparecer como solicitação pendente por causa de push atrasado; reconsultar status real da API.
+- Proteger ambiente de testes com chaves e dispositivos próprios; checar custos/limites do provedor e políticas antes de ativar em produção.
+
+Referência técnica já existente: [Avisos internos, pendências e plano de push](notificacoes-omini.md#push-remoto-futuro--somente-proposta). Aquele documento contém o planejamento histórico; este item explicita a escolha das notificações push como escopo **da Fase 2.6**.
+
+## 5. Sequência e critérios de entrega
 1. Revisão das regras de estados e do tratamento de trabalho parcialmente executado, sem quebrar Fase 2.4/2.5.
-2. Especificação de modelos, contratos e migrations aditivas, se indispensáveis.
-3. Implementação backend de encerramento e avaliações bidirecionais + testes de autorização, concorrência, imutabilidade e integridade.
-4. Implementação mobile do encerramento motivado, da reputação visual e das duas direções de avaliação, com QA em iPhone/Android.
+2. Especificação de modelos, contratos, regras de reciprocidade de avaliações e migrations aditivas necessárias, inclusive outbox/instalações push.
+3. Implementação backend de encerramento, avaliações bidirecionais e outbox/worker push + testes de autorização, concorrência, imutabilidade, deduplicação e integridade.
+4. Implementação mobile do encerramento motivado, da reputação visual, das duas direções de avaliação e das notificações, com QA em iPhone/Android e development builds próprios para push.
 5. **Primeiro**: validação em `OMINI_TEST` (`localhost\\OMINI_TEST`, porta 15433), preservando a instância/banco principal (`localhost\\OMINI`, porta 1433). Confirmar permissões SQL, backup, status das migrations e dados históricos.
 6. Somente depois de revisão e aprovação expressa do responsável, planejar implantação na base principal. Este documento não concede autorização para migrar, resetar, editar ou conectar a base principal.
 
 ### Fora do escopo aprovado até nova decisão
-- Pagamentos, reembolsos e comissões; moderação/denúncias completas; notificações push garantidas; resolução formal de disputas por trabalho parcialmente executado; novos planos de assinatura.
+- Pagamentos, reembolsos e comissões; moderação/denúncias completas; garantia absoluta de entrega de push (impossível assegurar); resolução formal de disputas por trabalho parcialmente executado; novos planos de assinatura.
