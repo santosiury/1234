@@ -1,61 +1,60 @@
 # Omini — Especificação proposta da Fase 2.6
 
-Status: **escopo funcional aprovado pelo responsável em 21/11/2026: encerramento motivado, reputação visual, avaliação bidirecional e notificações push remotas; em 22/11/2026 foi acrescentada a ocultação do diagnóstico de API para usuários finais; implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
+Status: **escopo funcional aprovado pelo responsável em 21/11/2026: encerramento motivado, reputação visual, avaliação bidirecional e notificações push remotas; em 22/11/2026 foram acrescentadas a ocultação do diagnóstico de API e a regra de cancelamento unilateral por ambos os participantes; implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
 
 Base técnica: continuidade da branch `feature/fase-2-5-contato-avaliacoes` (NestJS + Prisma/SQL Server, React Native/Expo SDK 58). Omini mantém contratação direta entre cliente e prestador; sem comissão, gerenciamento de orçamentos ou pagamentos dos serviços. A Fase 2.5 teve migrations, permissões, API principal, testes de contato e avaliações e conexão pelo iPhone validados em ambiente local em 22/11/2026; os fluxos completos com gravação haviam sido validados em OMINI_TEST. Isso não equivale a publicação pública do app. A atualização coordenada das dependências Expo SDK 58 permanece pendente e deve ter regressão própria antes de qualquer release.
 
-## 1. Encerramento motivado de solicitação por falta de acordo
+## 1. Cancelamento autônomo e motivado de atendimento
 
-### Problema
-Na Fase 2.5, `cancel` é permitido somente ao **cliente** em `REQUESTED` e `ACCEPTED`. Depois de `start`, o estado `IN_PROGRESS` não admite cancelamento motivado; tampouco há ação para o prestador encerrar um aceite sem acordo. Aceitar indica interesse em conversar, e **não** significa preço ou condições acordados. O estado `IN_PROGRESS` pode ter sido acionado antes do acordo.
+### Decisão de produto atualizada pelo responsável em 22/11/2026
+**Cliente e prestador têm autonomia individual para cancelar/encerrar a continuidade do atendimento sem depender da autorização, confirmação bilateral ou concordância da outra parte.** A proposta anterior de confirmação bilateral em `IN_PROGRESS` foi rejeitada expressamente. A ausência de acordo, o trabalho parcialmente realizado ou uma divergência não podem prender uma pessoa à relação contratual dentro do aplicativo.
 
-### Escopo aprovado
-- Oferecer **Encerrar atendimento** a cliente e prestador para negociações sem acordo **após aceite**, inclusive se a solicitação já estiver em `IN_PROGRESS`, sujeito às regras de proteção abaixo.
-- Apresentar **um único motivo selecionável** (radio buttons ou seletor de escolha única), nunca checklist múltiplo.
-- Se selecionado **Outro motivo**, exibir campo livre obrigatório com **10 a 500 caracteres**, aparado, normalizado e validado também no backend.
-- Motivo aprovado/selecionado na prévia: **“Não chegamos a um acordo sobre o valor”**. Ele deve existir como **primeira opção**; no formulário real, não pré-selecionar motivo, para assegurar escolha consciente.
-- Exigir confirmação explícita antes de registrar a transição, com aviso de que o atendimento será encerrado, não concluído.
-- Registrar ator, motivo estruturado, texto complementar quando aplicável e data/hora confiável em histórico acessível aos participantes. Não disponibilizar motivo ou relato em catálogo e avaliações públicas.
-- Notificar/atualizar a outra parte pelos mecanismos existentes e, quando houver permissão/instalação compatível, pelo novo fluxo push da Fase 2.6. A conclusão da transição não pode depender de entrega push.
-- Ao encerrar: impedir novas consultas ao telefone, remover botões WhatsApp/Ligar, preservar histórico e impedir novas avaliações para solicitações não concluídas. Não apagar contato que a outra pessoa já obteve fora do app.
-- Manter `COMPLETED` exclusivo para confirmação real de conclusão pelo cliente. Não converter encerramento por desacordo em `COMPLETED`, não gerar evento fictício de conclusão e não afetar avaliações históricas válidas.
+### Estados e autores
+| Estado atual | Cliente | Prestador | Comportamento |
+| --- | --- | --- | --- |
+| `REQUESTED` | Cancelar | Recusar | Preservar compatibilidade existente |
+| `ACCEPTED` | Cancelar | Cancelar | Cancelamento unilateral motivado |
+| `IN_PROGRESS` | Cancelar | Cancelar | Cancelamento unilateral motivado, mesmo com execução parcial |
+| `AWAITING_CONFIRMATION` | Cancelar | Cancelar | Cancelamento unilateral motivado; não tratar como conclusão confirmada |
+| `COMPLETED` | Não | Não | Manter conclusão histórica; sem cancelamento retroativo |
+| `CANCELLED`, `REJECTED` | Não | Não | Estados finais, exceto recuperação idempotente |
 
-### Motivos do CLIENTE (escolha única)
-| Código proposto | Rótulo aprovado |
-| --- | --- |
-| `NO_PRICE_AGREEMENT` | **Não chegamos a um acordo sobre o valor** |
-| `DEADLINE_NOT_SUITABLE` | O prazo não atende à minha necessidade |
-| `SERVICE_MISMATCH` | O serviço oferecido não corresponde ao solicitado |
-| `PROVIDER_UNAVAILABLE` | O profissional não poderá realizar o atendimento |
-| `NO_LONGER_NEEDED` | Não preciso mais do serviço |
-| `OTHER_TERMS_NO_AGREEMENT` | Não chegamos a um acordo sobre as condições |
-| `OTHER` | Outro motivo (explicação obrigatória) |
+- Reutilizar o estado final `CANCELLED` para continuidade encerrada, registrando motivo e contexto; avaliar a nomenclatura **“Atendimento encerrado”** na interface quando houver trabalho parcial. Nunca inferir “nenhum trabalho ocorreu” apenas de `CANCELLED`.
+- O usuário toma a decisão unilateral: selecionar motivo, confirmar uma vez e receber sucesso após commit; **sem aceite da contraparte**. A outra parte apenas recebe informação e pode consultar o histórico.
+- Não bloquear cancelamento por existir `startedAt`, evento `start`, `propose-completion`, alegação de trabalho parcial ou divergência. Essas informações determinam contexto/auditoria, não direito de veto.
+- **Não** alterar `COMPLETED`, apagar trabalhos/avaliações passados ou inferir renúncia a pagamentos, indenizações, direitos ou deveres. O Omini não adjudica execução, pagamento ou culpa; possível disputa/contestação será tratada em módulo próprio futuro.
+- Se já houve conclusão proposta (`AWAITING_CONFIRMATION`), preservá-la no histórico como alegação de uma parte, sem convertê-la automaticamente em `COMPLETED`; cancelamento não significa confirmação ou recusa jurídica do serviço.
+- Cancelamento impede novas consultas do contato pelo aplicativo e novas avaliações **no fluxo atual que exige `COMPLETED`**, mas não apaga contato previamente obtido, nem altera avaliações históricas legítimas. Avaliar em fase futura como lidar com abuso de cancelamento unilateral para evitar reputação.
+- Notificar a outra parte pelo canal interno e push (quando implementado), sem depender do sucesso da notificação para concluir a operação.
 
-### Motivos propostos para o PRESTADOR (a revisar na implementação)
-| Código proposto | Rótulo sugerido |
-| --- | --- |
-| `NO_PRICE_AGREEMENT` | Não chegamos a um acordo sobre o valor |
-| `SCOPE_MISMATCH` | O serviço solicitado está fora do escopo combinado |
-| `SCHEDULE_CONFLICT` | Não conseguimos combinar data ou horário |
-| `UNABLE_TO_PERFORM` | Não poderei realizar o serviço |
-| `OTHER_TERMS_NO_AGREEMENT` | Não chegamos a um acordo sobre as condições |
-| `OTHER` | Outro motivo (explicação obrigatória) |
+### Motivo de escolha única e contexto de execução
+- Campo `reasonCode` obrigatório e validado no backend para novos cancelamentos após aceite; motivo **não pré-selecionado** e apenas uma opção por evento.
+- Primeira opção em ambos os perfis: **“Não chegamos a um acordo sobre o valor”**.
+- **Outro motivo** requer texto aparado entre **10 e 500 caracteres**, sujeito a controles de privacidade, sanitização e validação.
+- Motivos do **cliente** (propostos): `NO_PRICE_AGREEMENT` (primeira), `DEADLINE_NOT_SUITABLE`, `SERVICE_MISMATCH`, `PROVIDER_UNAVAILABLE`, `NO_LONGER_NEEDED`, `OTHER_TERMS_NO_AGREEMENT`, `OTHER`.
+- Motivos do **prestador** (propostos): `NO_PRICE_AGREEMENT` (primeira), `SCOPE_MISMATCH`, `SCHEDULE_CONFLICT`, `UNABLE_TO_PERFORM`, `OTHER_TERMS_NO_AGREEMENT`, `OTHER`.
+- Em `IN_PROGRESS` ou `AWAITING_CONFIRMATION`, apresentar campo de contexto estruturado: **nenhum trabalho realizado / trabalho parcial realizado / trabalho integral alegado / situação contestada ou não sei informar**. O campo não condiciona o direito de cancelar; registra apenas declaração do autor, sem presumir concordância da outra parte.
+- Registrar contexto/declaração de execução, ator, motivo e data UTC em evento auditável. Não expor relatos em catálogo ou avaliações públicas. Não confundir a declaração unilateral com prova objetiva.
+- Antes de confirmar, apresentar mensagem clara de que o cancelamento interrompe a continuidade do atendimento no Omini, não comprova inexistência de execução e não resolve obrigações financeiras.
+- O formulário permite cancelar sem contato direto com a contraparte e mostra confirmação amigável do resultado.
 
-### Estados e proteção contra encerramentos indevidos
-- Candidatos à transição: `ACCEPTED` e `IN_PROGRESS`. `REQUESTED` mantém a rejeição/cancelamento atual, com compatibilidade retroativa a revisar.
-- Considerar reutilizar `CANCELLED` com razão/ator estruturados para permitir migração compatível; **decidir o desenho antes de implementar**, comparando semântica com `REJECTED` e o histórico atual. Não criar estado novo apenas por preferência visual.
-- Em `IN_PROGRESS`, perguntar se **houve execução efetiva, parcial ou entrega**. Quando houve trabalho executado ou divergência sobre isso, **não** encerrar automaticamente como simples "sem acordo"; preparar tratamento diferenciado de interrupção/pendência e deixar o caso fora do fluxo simplificado até definição de produto. A resposta não deve funcionar como prova definitiva de execução.
-- `AWAITING_CONFIRMATION`, `COMPLETED`, `CANCELLED` e `REJECTED` não podem ser encerrados por esta ação simplificada. Preservar o fluxo atual de confirmação/reabertura.
-- Autorizar apenas participantes originais com perfis/contas ativos; validar estado e versão do registro no servidor com transação serializável, idempotency key, trilha de auditoria e sem duplicar eventos.
-- Sanitizar texto livre: impedir HTML, dados de contato/PII evidentes, URLs e caracteres de controle, com mensagens de validação úteis. Preservar privacidade dos registros.
-- Definir o comportamento de desistência sem acordo versus cancelamento comum, para não confundir métricas e reputação.
+### Contratos/API, segurança e persistência
+- Verificar autenticação e vínculo imutável do participante; autorização é função de **estado + perfil + ação** (não liberar `cancel` a prestador em `REQUESTED`).
+- Preferir compatibilidade com `POST /api/requests/:id/cancel` para o cancelamento motivado; manter leituras e recibos idempotentes históricos da Fase 2.5. Os clientes antigos que não fornecem novos dados exigem uma política de compatibilidade explícita antes do rollout.
+- Validar versão, chave idempotente e payload. Em corrida com conclusão, inicio ou cancelamento da outra parte, apenas uma transição vence; repetir requisição idêntica recupera o resultado, payload distinto deve gerar conflito seguro.
+- Atualizar estado, `cancelledAt`, versão, evento de auditoria e motivo em transação serializável, sem apagar `acceptedAt`, `startedAt`, `completionProposedAt` ou histórico. Não preencher `completedAt` ao cancelar.
+- **Migration nova, nunca editar migrations históricas**: campo opcional de código de motivo no evento e persistência do contexto de execução (preferir campos estruturados próprios, com compatibilidade retroativa).
+- A constraint SQL `ServiceRequestEvent_transition_check` da Fase 2.4 proíbe `IN_PROGRESS → CANCELLED` e `AWAITING_CONFIRMATION → CANCELLED`. Uma migration de evolução deverá **substituir controladamente a constraint**, mantendo todas as transições antigas e acrescentando exatamente as novas, com `WITH CHECK CHECK CONSTRAINT`, transação e regressão. A substituição de constraint é alteração de esquema necessária, ainda que não exclua dados; documentar essa exceção ao princípio de migrações estritamente aditivas.
+- Restringir alterações e consultas a quem participa, validar texto de entrada e proibir vazamento de dados privados. Auditar sem permitir alteração ou exclusão dos eventos antigos.
 
-### Alterações técnicas planejadas (não implementadas)
-- **shared**: ação/transições, motivo tipado, rótulos, campos de leitura compatíveis.
-- **API**: validação estrita do motivo, transição autorizada e idempotente, persistência de evento e resposta sem exposição de PII; manter contrato das rotas históricas ou versionar mudanças incompatíveis.
-- **SQL Server**: avaliar se bastam campos/eventos históricos existentes; se campos adicionais forem necessários, criar migration **aditiva**, jamais editar migrations já aplicadas nem resetar dados.
-- **Mobile**: botão condicionado ao estado/perfil, formulário de seleção única, campo Outro, confirmação, resposta segura a falha de rede/repetição, refresh do histórico, acessibilidade e estados vazios.
-- **Testes**: transições elegíveis/negadas, concorrência, múltiplos toques, idempotência, revogação de acesso ao contato, não elegibilidade para avaliação, datas/histórico, perfis adversários, texto inválido, app iPhone e Android.
+### Plano e testes
+1. Implementar contratos, validações e testes de domínio sem banco principal.
+2. Implementar backend e persistência, nova migration e verificações de schema em ambiente isolado, sem afetar a instância principal.
+3. Interface de seleção única, contexto de execução, aviso, confirmação, atualização imediata do status e histórico para ambos os perfis.
+4. Testar `REQUESTED`, `ACCEPTED`, `IN_PROGRESS`, `AWAITING_CONFIRMATION`, finais, execução parcial, divergência, simultaneidade, autorização, idempotência, rollback, contato, avaliação e compatibilidade antiga.
+5. Validar migrations **somente em `OMINI_TEST`, porta 15433**, após checagem explícita da instância e autorização; jamais aplicar automaticamente em `OMINI`/1433. Comparar dados e permissões antes/depois.
+6. Testar iPhone/Android, erros de rede, múltiplos toques, perfis distintos, acessibilidade, notificações internas e eventual push.
+7. Implantar no principal apenas após testes, revisão e **autorização expressa** do responsável.
 
 ## 2. Reputação e avaliação visual no estilo Uber
 
