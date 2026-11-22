@@ -1,8 +1,8 @@
 # Omini — Especificação proposta da Fase 2.6
 
-Status: **escopo funcional aprovado pelo responsável em 21/11/2026: encerramento motivado, reputação visual, avaliação bidirecional e notificações push remotas; implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
+Status: **escopo funcional aprovado pelo responsável em 21/11/2026: encerramento motivado, reputação visual, avaliação bidirecional e notificações push remotas; em 22/11/2026 foi acrescentada a ocultação do diagnóstico de API para usuários finais; implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
 
-Base técnica: continuidade da branch `feature/fase-2-5-contato-avaliacoes` (NestJS + Prisma/SQL Server, React Native/Expo SDK 58). Omini mantém contratação direta entre cliente e prestador; sem comissão, gerenciamento de orçamentos ou pagamentos dos serviços. A Fase 2.5 deve ser concluída e revista antes do rollout.
+Base técnica: continuidade da branch `feature/fase-2-5-contato-avaliacoes` (NestJS + Prisma/SQL Server, React Native/Expo SDK 58). Omini mantém contratação direta entre cliente e prestador; sem comissão, gerenciamento de orçamentos ou pagamentos dos serviços. A Fase 2.5 teve migrations, permissões, API principal, testes de contato e avaliações e conexão pelo iPhone validados em ambiente local em 22/11/2026; os fluxos completos com gravação haviam sido validados em OMINI_TEST. Isso não equivale a publicação pública do app. A atualização coordenada das dependências Expo SDK 58 permanece pendente e deve ter regressão própria antes de qualquer release.
 
 ## 1. Encerramento motivado de solicitação por falta de acordo
 
@@ -140,11 +140,30 @@ Eventos iniciais de notificação:
 
 Referência técnica já existente: [Avisos internos, pendências e plano de push](notificacoes-omini.md#push-remoto-futuro--somente-proposta). Aquele documento contém o planejamento histórico; este item explicita a escolha das notificações push como escopo **da Fase 2.6**.
 
-## 5. Sequência e critérios de entrega
+## 5. Ocultar diagnóstico de conexão com a API para usuários finais
+
+### Motivação e decisão de produto (22/11/2026)
+A Fase 2.5 manteve na tela **Perfil** um cartão técnico **“Conexão com a API”**, com botão **“Testar conexão”** e resultado do `GET /api/health`. O diagnóstico foi útil para a homologação no iPhone, incluindo a conexão com a API principal em `192.168.0.7:3000`, mas **não é funcionalidade voltada ao cliente ou prestador**. O responsável solicitou movê-lo para a Fase 2.6 após o fechamento funcional da 2.5.
+
+### Comportamento desejado
+- **Aplicativo público / build de produção:** não exibir a seção **Conexão com a API**, o botão **Testar conexão**, URLs, portas, dados técnicos de servidor ou mensagens de *health check* no Perfil de clientes ou prestadores.
+- **Ambiente de desenvolvimento/QA:** preservar uma forma de testar conectividade, protegida por configuração explícita de desenvolvimento (ex.: `__DEV__` ou flag interna); não depender de uma chave que o usuário final possa habilitar inadvertidamente. O teste continua a ser de leitura e não coleta/envia dados pessoais.
+- **Experiência de uso normal:** comunicação com a API ocorre automaticamente nas ações do app; se houver erro de rede ou indisponibilidade, apresentar mensagem amigável, opção de tentar novamente e estados de carregamento/offline adequados. Não mostrar detalhes de infraestrutura nem confundir indisponibilidade com falha de autenticação.
+- **Backend:** manter `GET /api/health` para monitoramento e diagnóstico técnico, sem expor dados privados. Esta melhoria é principalmente de apresentação no aplicativo, não de remoção da rota.
+- **Segurança e configuração:** não embutir endereços locais de testes como destino padrão de uma build pública; configurar a URL da API por ambiente e revisar permissões e distribuição de builds antes do release.
+
+### Critérios de aceite
+1. No iPhone e Android em **build de produção ou equivalente**, a tela Perfil de cliente/prestador não exibe o cartão ou botão de diagnóstico.
+2. Em **desenvolvimento/QA**, a ferramenta continua acessível aos desenvolvedores e o teste HTTP ainda funciona.
+3. Com API indisponível, o app informa de forma amigável, sem revelar IP, porta, stack trace, token ou informações internas; após reconexão, a funcionalidade normal retorna.
+4. Contato, solicitações, avaliações, autenticação e navegação permanecem funcionais; validar regressão e acessibilidade em iPhone e Android.
+5. Tratar a atualização coordenada das dependências compatíveis com Expo SDK 58 e executar novamente os testes de regressão antes da distribuição pública; não misturar upgrades com a simples ocultação sem validação.
+
+## 6. Sequência e critérios de entrega
 1. Revisão das regras de estados e do tratamento de trabalho parcialmente executado, sem quebrar Fase 2.4/2.5.
 2. Especificação de modelos, contratos, regras de reciprocidade de avaliações e migrations aditivas necessárias, inclusive outbox/instalações push.
 3. Implementação backend de encerramento, avaliações bidirecionais e outbox/worker push + testes de autorização, concorrência, imutabilidade, deduplicação e integridade.
-4. Implementação mobile do encerramento motivado, da reputação visual, das duas direções de avaliação e das notificações, com QA em iPhone/Android e development builds próprios para push.
+4. Implementação mobile do encerramento motivado, da reputação visual, das duas direções de avaliação, das notificações e da ocultação do diagnóstico técnico em builds públicas, com QA em iPhone/Android e development builds próprios para push.
 5. **Primeiro**: validação em `OMINI_TEST` (`localhost\\OMINI_TEST`, porta 15433), preservando a instância/banco principal (`localhost\\OMINI`, porta 1433). Confirmar permissões SQL, backup, status das migrations e dados históricos.
 6. Somente depois de revisão e aprovação expressa do responsável, planejar implantação na base principal. Este documento não concede autorização para migrar, resetar, editar ou conectar a base principal.
 
