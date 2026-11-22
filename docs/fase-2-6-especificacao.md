@@ -1,6 +1,6 @@
 # Omini — Especificação proposta da Fase 2.6
 
-Status: **escopo funcional aprovado pelo responsável em 21/11/2026; implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
+Status: **escopo funcional atualizado e aprovado pelo responsável em 21/11/2026 (inclui avaliações bidirecionais); implementação pendente**. Documento de planejamento, **não** equivale a código entregue ou migration aplicada.
 
 Base técnica: continuidade da branch `feature/fase-2-5-contato-avaliacoes` (NestJS + Prisma/SQL Server, React Native/Expo SDK 58). Omini mantém contratação direta entre cliente e prestador; sem comissão, gerenciamento de orçamentos ou pagamentos dos serviços. A Fase 2.5 deve ser concluída e revista antes do rollout.
 
@@ -82,13 +82,37 @@ Na Fase 2.5, `cancel` é permitido somente ao **cliente** em `REQUESTED` e `ACCE
 - Encerramento por desacordo não abre avaliação.
 - Conferir formatação pt-BR, acessibilidade e layout em iPhone/Android.
 
-## 3. Sequência e critérios de entrega
+## 3. Avaliações bidirecionais — cliente e prestador
+
+### Novo escopo aprovado pelo responsável
+Além da avaliação já implementada **cliente → prestador** na Fase 2.5, a Fase 2.6 deverá permitir **prestador → cliente**, com avaliações independentes vinculadas à mesma solicitação validamente concluída. A reputação do prestador **nunca** mistura avaliações enviadas por ele; a reputação recebida pelo cliente permanece separada e com visibilidade limitada.
+
+Regras de produto:
+- Somente após `COMPLETED` com `completedAt` e evidência real do evento `confirm-completion` pelo cliente. Solicitações `REQUESTED`, `ACCEPTED`, `IN_PROGRESS`, `AWAITING_CONFIRMATION`, `CANCELLED`, `REJECTED` e encerradas por desacordo são inelegíveis.
+- **Uma avaliação por direção e por solicitação**, nota inteira de 1 a 5, comentário opcional até 1.000 caracteres, sem dados pessoais, HTML ou links. As publicações devem ser imutáveis e idempotentes, com unicidade no SQL Server.
+- Apenas os participantes originais autenticados podem avaliar; `authorUserId`, `subjectUserId` e direção são derivados no servidor, nunca informados arbitrariamente pelo aplicativo. Autoavaliação, inclusive por dois perfis da mesma conta, é proibida.
+- Tela do prestador deve oferecer **Avaliar cliente** após a confirmação legítima de conclusão; o cliente mantém **Avalie o atendimento**. Convidar sem obrigar; permitir retorno pelo histórico.
+- Exibir separadamente avaliações recebidas e enviadas na área privada, com proteção de identidade e dados pessoais. **Não criar diretório público de notas de clientes nesta fase** sem política e autorização próprias; reputação do cliente é restrita às superfícies legitimamente autorizadas e minimizada.
+- Preservar e tornar compatíveis todas as avaliações existentes da Fase 2.5 em `ServiceReview`, sem edição, deleção, recalculá-las indevidamente ou fabricar avaliação inversa. Propor migration aditiva somente após revisão de modelo e T-SQL em instância isolada.
+
+### Decisão de publicação e reciprocidade ainda necessária
+O documento pré-existente [Proposta de avaliações bidirecionais](avaliacoes-bidirecionais.md) descreve **janela de 14 dias e avaliações seladas até ambos avaliarem ou o prazo terminar**, para impedir retaliação. Essa política **não é implementação existente nem foi explicitamente escolhida pelo responsável**. É a recomendação de design a submeter antes da codificação.
+
+A avaliação cliente → prestador da Fase 2.5 é publicada imediatamente. Para adicionar publicação selada a novas avaliações, definir estratégia de transição **sem reter, esconder ou alterar retroativamente** as duas avaliações já publicadas nem mudar silenciosamente os contratos legados. Considerar compatibilidade de mobile/API e publicação idempotente por job/outbox se adotado; testar fluxo com uma e duas partes enviando, prazo expirado e concorrência. Se a opção de publicação imediata for escolhida, documentar riscos de retaliação e mitigação.
+
+### Arquitetura e testes de aceite
+- Contratos compartilhados de direção, autoria e elegibilidade; API/guards de ambas as partes; SQL Server com constraints, FKs `NoAction`, índices e permissões mínimas. Evitar permissões de UPDATE/DELETE sobre avaliações.
+- API pública de prestadores continua mostrando **somente** avaliações recebidas dos clientes; avaliações inversas ficam em endpoints autorizados. Média decimal, total e paginação consistentes.
+- Testar duas avaliações distintas da mesma solicitação concluída (uma por parte), reenvio idempotente, tentativa de alterar nota (409), outra conta (404/403 seguro), status inválido e término sem acordo; ausência de dados pessoais nas respostas.
+- Testar iPhone/Android, mudança de conta, sessão expirada, rede instável, repetição de toque e nenhum envio duplicado.
+
+## 4. Sequência e critérios de entrega
 1. Revisão das regras de estados e do tratamento de trabalho parcialmente executado, sem quebrar Fase 2.4/2.5.
 2. Especificação de modelos, contratos e migrations aditivas, se indispensáveis.
-3. Implementação backend + testes de autorização, concorrência, imutabilidade e integridade.
-4. Implementação mobile do encerramento motivado e da reputação visual, com QA em iPhone/Android.
+3. Implementação backend de encerramento e avaliações bidirecionais + testes de autorização, concorrência, imutabilidade e integridade.
+4. Implementação mobile do encerramento motivado, da reputação visual e das duas direções de avaliação, com QA em iPhone/Android.
 5. **Primeiro**: validação em `OMINI_TEST` (`localhost\\OMINI_TEST`, porta 15433), preservando a instância/banco principal (`localhost\\OMINI`, porta 1433). Confirmar permissões SQL, backup, status das migrations e dados históricos.
 6. Somente depois de revisão e aprovação expressa do responsável, planejar implantação na base principal. Este documento não concede autorização para migrar, resetar, editar ou conectar a base principal.
 
 ### Fora do escopo aprovado até nova decisão
-- Pagamentos, reembolsos e comissões; moderação/denúncias completas; avaliação prestador -> cliente; notificações push garantidas; resolução formal de disputas por trabalho parcialmente executado; novos planos de assinatura.
+- Pagamentos, reembolsos e comissões; moderação/denúncias completas; notificações push garantidas; resolução formal de disputas por trabalho parcialmente executado; novos planos de assinatura.
