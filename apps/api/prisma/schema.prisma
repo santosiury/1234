@@ -184,6 +184,8 @@ model ServiceRequestEvent {
   action String @db.NVarChar(32)
   occurredAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
   reason String? @db.NVarChar(500)
+  reasonCode String? @db.NVarChar(40)
+  executionContext String? @db.NVarChar(32)
   version Int
   idempotencyKey String @db.UniqueIdentifier
   payloadHash String @db.Char(64)

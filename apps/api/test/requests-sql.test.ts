@@ -10,10 +10,11 @@ test("request SQL is additive, protects terminal dates, history, idempotency and
     "prisma/migrations/20261112000000_service_requests/migration.sql",
     "utf8",
   );
-  await validateInitialMigration(schema, sql, [
-    "ServiceRequest",
-    "ServiceRequestEvent",
-  ]);
+  await validateInitialMigration(
+    await readFile("prisma/history/phase25.prisma.snapshot", "utf8"),
+    sql,
+    ["ServiceRequest", "ServiceRequestEvent"],
+  );
   assert.doesNotMatch(
     sql,
     /ALTER TABLE \[dbo\]\.\[(User|ClientProfile|ProviderProfile|ProviderService|ServiceCategory|ProviderServiceArea)\]/,

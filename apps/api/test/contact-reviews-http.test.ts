@@ -55,7 +55,17 @@ test("HTTP contact requires authentication, participant and accepted open status
         await (await f.call(p, "GET", undefined, t)).text(),
         /phone|whatsapp|5548998765432/i,
       );
-    await f.act(row, "cancel", f.client);
+    await f.call(
+      `requests/${row.id}/cancel`,
+      "POST",
+      {
+        version: row.version,
+        idempotencyKey: "50000000-0000-4000-8000-000000000001",
+        reasonCode: "PRICE_DISAGREEMENT",
+        confirmed: true,
+      },
+      f.client,
+    );
     assert.equal(
       (await f.call(path, "GET", undefined, f.provider)).status,
       404,

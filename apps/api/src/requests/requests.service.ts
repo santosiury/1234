@@ -2,7 +2,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import {
   allowedRequestActions,
+  CANCELLATION_REASON_LABELS,
   REQUEST_TRANSITIONS,
+  type CancelRequestInput,
+  type CancellationReasonCode,
+  type CancellationExecutionContext,
   type CreateRequestInput,
   type RequestAction,
   type RequestActionInput,
@@ -21,6 +25,11 @@ import {
   type RequestPatch,
 } from "./requests.repository";
 import type { ParsedRequestQuery } from "./validation";
+import { parseInput } from "../auth/auth.validation";
+import {
+  cancellationIntentSchema,
+  validateCancellationInput,
+} from "./cancellation.validation";
 const equal = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
 const missing = () =>
   new ApiError(404, "NOT_FOUND", "Solicitação não encontrada.");
@@ -100,6 +109,15 @@ async function historyEvents(
     newStatus: event.newStatus as RequestStatus,
     occurredAt: event.occurredAt.toISOString(),
     reason: event.reason,
+    ...(event.reasonCode
+      ? { reasonCode: event.reasonCode as CancellationReasonCode }
+      : {}),
+    ...(event.executionContext
+      ? {
+          executionContext:
+            event.executionContext as CancellationExecutionContext,
+        }
+      : {}),
     version: event.version,
   }));
 }
@@ -198,6 +216,8 @@ export class RequestsService {
         action: "create",
         occurredAt: now,
         reason: null,
+        reasonCode: null,
+        executionContext: null,
         version: 1,
         idempotencyKey,
         payloadHash: hash,
@@ -256,13 +276,23 @@ export class RequestsService {
     userId: string,
     id: string,
     action: RequestAction,
-    input: RequestActionInput,
+    input: RequestActionInput | CancelRequestInput,
   ) {
+    // Canonicalize new metadata before hashing; old operations retain their exact hash shape.
+    if (action === "cancel")
+      input = parseInput(cancellationIntentSchema, input);
     const hash = fingerprint({
       id,
       action,
       version: input.version,
       reason: input.reason ?? null,
+      ...(action === "cancel" && "reasonCode" in input
+        ? {
+            reasonCode: input.reasonCode,
+            executionContext: input.executionContext ?? null,
+            confirmed: input.confirmed,
+          }
+        : {}),
     });
     return this.run(async (tx) => {
       const user = await actor(tx, userId);
@@ -284,7 +314,11 @@ export class RequestsService {
         return detail(tx, row, user);
       }
       const rule = REQUEST_TRANSITIONS[action];
-      if (viewer !== rule.actor || !user[viewer])
+      const participantAllowed =
+        action === "cancel"
+          ? row.status !== "REQUESTED" || viewer === "client"
+          : viewer === rule.actor;
+      if (!participantAllowed || !user[viewer])
         throw new ApiError(
           403,
           "ACTION_FORBIDDEN",
@@ -297,6 +331,26 @@ export class RequestsService {
           "INVALID_TRANSITION",
           "Esta ação não está disponível no estado atual.",
         );
+      let cancellation: CancelRequestInput | null = null;
+      if (action === "cancel") {
+        if ("reasonCode" in input) {
+          cancellation = validateCancellationInput(
+            {
+              status: row.status as RequestStatus,
+              participant: viewer,
+              hasRecordedStart: row.startedAt !== null,
+            },
+            input,
+          );
+        } else if (row.status !== "REQUESTED" || row.startedAt !== null) {
+          throw new ApiError(
+            400,
+            "CANCELLATION_DETAILS_REQUIRED",
+            "Atualize o aplicativo e informe o motivo e a confirmação para cancelar este atendimento.",
+            ["reasonCode", "confirmed"],
+          );
+        }
+      }
       if (
         action === "reopen" &&
         (!input.reason || input.reason.trim().length < 10)
@@ -335,7 +389,13 @@ export class RequestsService {
         newStatus: rule.to,
         action,
         occurredAt: now,
-        reason: input.reason ?? null,
+        reason: cancellation
+          ? cancellation.reasonCode === "OTHER"
+            ? cancellation.reason
+            : CANCELLATION_REASON_LABELS[cancellation.reasonCode]
+          : (input.reason ?? null),
+        reasonCode: cancellation?.reasonCode ?? null,
+        executionContext: cancellation?.executionContext ?? null,
         version: patch.version,
         idempotencyKey: input.idempotencyKey,
         payloadHash: hash,

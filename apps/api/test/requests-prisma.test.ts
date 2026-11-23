@@ -97,3 +97,52 @@ test("Prisma requests use Serializable transactions, bound location values, data
     },
   });
 });
+
+test("Prisma event writer forwards cancellation reason/context unchanged and uses the existing Serializable unit of work without SQL execution", async () => {
+  let inserted: unknown;
+  const now = new Date("2026-11-23T12:00:00Z");
+  const db = {
+    serviceRequestEvent: {
+      create: async ({ data }: { data: unknown }) => {
+        inserted = data;
+        return { id: "event", ...(data as object) };
+      },
+    },
+  };
+  const service = new PrismaService(
+    new ConfigService({ PERSISTENCE_ENABLED: false }),
+    () => {
+      throw Error("No connection permitted");
+    },
+  );
+  service.orm = () =>
+    ({
+      $transaction: async (
+        run: (tx: typeof db) => Promise<unknown>,
+        options: { isolationLevel: string },
+      ) => {
+        assert.equal(options.isolationLevel, "Serializable");
+        return run(db);
+      },
+    }) as unknown as PrismaClient;
+  const repository = new PrismaRequestsRepository(service);
+  const data = {
+    requestId: "request",
+    actorUserId: "provider",
+    previousStatus: "AWAITING_CONFIRMATION",
+    newStatus: "CANCELLED",
+    action: "cancel",
+    occurredAt: now,
+    reason: "Não chegamos a um acordo sobre o valor",
+    reasonCode: "PRICE_DISAGREEMENT",
+    executionContext: "FULL_CLAIMED",
+    version: 5,
+    idempotencyKey: "key",
+    payloadHash: "a".repeat(64),
+  };
+  const row = await repository.transaction((tx) => tx.append(data));
+  assert.deepEqual(inserted, data);
+  assert.equal(row.reasonCode, "PRICE_DISAGREEMENT");
+  assert.equal(row.executionContext, "FULL_CLAIMED");
+  assert.equal(row.occurredAt, now);
+});

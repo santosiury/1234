@@ -27,6 +27,11 @@ import {
 import { AccessGuard, CurrentUser } from "../auth/auth.guard";
 import { parseInput } from "../auth/auth.validation";
 import { RequestsService } from "./requests.service";
+import { cancellationIntentSchema } from "./cancellation.validation";
+import {
+  CANCELLATION_REASON_CODES,
+  CANCELLATION_EXECUTION_CONTEXTS,
+} from "@omini/shared";
 import { RequestsRateGuard } from "./requests-rate.guard";
 import {
   actionSchema,
@@ -94,6 +99,18 @@ const detail = {
           newStatus: { type: "string", enum: [...REQUEST_STATUSES] },
           occurredAt: { type: "string", format: "date-time" },
           reason: { type: "string", nullable: true },
+          reasonCode: {
+            type: "string",
+            nullable: true,
+            enum: [...CANCELLATION_REASON_CODES],
+          },
+          executionContext: {
+            type: "string",
+            nullable: true,
+            enum: [...CANCELLATION_EXECUTION_CONTEXTS],
+            description:
+              "Declaração do participante; não é prova de execução ou conclusão.",
+          },
           version: { type: "integer" },
         },
       },
@@ -298,6 +315,8 @@ export class RequestsController {
   @ApiOperation({
     summary:
       "Transição autorizada com compare-and-set de estado/versão e recibo idempotente",
+    description:
+      "cancel: unilateral por ambos após aceite, inclusive em andamento ou aguardando confirmação. Novos cancelamentos pós-aceite exigem reasonCode e confirmed=true; início registrado exige executionContext. OTHER exige reason de 10 a 500 caracteres; outros códigos não aceitam reason livre. Body legado somente em REQUESTED ou para recuperar recibo existente. Motivos dependem do participante original, não do modo escolhido no app.",
   })
   @ApiParam({ name: "id", format: "uuid" })
   @ApiParam({ name: "action", enum: REQUEST_ACTIONS })
@@ -309,6 +328,24 @@ export class RequestsController {
       properties: {
         version: { type: "integer", minimum: 1, maximum: 2147483646 },
         idempotencyKey: uuid,
+        reasonCode: {
+          type: "string",
+          enum: [...CANCELLATION_REASON_CODES],
+          description:
+            "Somente cancel: obrigatório após aceite; único motivo, restrito ao participante.",
+        },
+        confirmed: {
+          type: "boolean",
+          enum: [true],
+          description:
+            "Somente cancel estruturado; confirmação do próprio usuário.",
+        },
+        executionContext: {
+          type: "string",
+          enum: [...CANCELLATION_EXECUTION_CONTEXTS],
+          description:
+            "Somente cancel; obrigatório se iniciado. Informação alegada pelo ator.",
+        },
         reason: {
           type: "string",
           maxLength: 500,
@@ -325,11 +362,14 @@ export class RequestsController {
     @Param("action") action: string,
     @Body() body: unknown,
   ) {
+    const parsedAction = parseInput(actionSchema, action);
     return this.service.act(
       user.id,
       parseInput(requestIdSchema, id),
-      parseInput(actionSchema, action),
-      parseInput(requestActionSchema, body),
+      parsedAction,
+      parsedAction === "cancel"
+        ? parseInput(cancellationIntentSchema, body)
+        : parseInput(requestActionSchema, body),
     );
   }
 }

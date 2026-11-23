@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { validateCancellationMigration } from "./cancellation-migration-validation";
 import { validateInitialMigration } from "./migration-validation";
 async function main() {
   const schema = await readFile(
@@ -10,6 +11,10 @@ async function main() {
     "utf8",
   );
   await validateInitialMigration(schema, sql);
+  const previous = await readFile(
+    "prisma/history/phase25.prisma.snapshot",
+    "utf8",
+  );
   const current = await readFile("prisma/schema.prisma", "utf8");
   const authSql = await readFile(
     "prisma/migrations/20261110000000_authentication/migration.sql",
@@ -21,7 +26,7 @@ async function main() {
     "RefreshToken",
   ]);
   await validateInitialMigration(
-    current,
+    previous,
     await readFile(
       "prisma/migrations/20261112000000_service_requests/migration.sql",
       "utf8",
@@ -35,6 +40,21 @@ async function main() {
       "utf8",
     ),
     ["ServiceReview"],
+  );
+  await validateCancellationMigration(
+    previous,
+    current,
+    await readFile(
+      "prisma/migrations/20261112000000_service_requests/migration.sql",
+      "utf8",
+    ),
+    await readFile(
+      "prisma/migrations/20261123000000_unilateral_cancellation/migration.sql",
+      "utf8",
+    ),
+  );
+  console.log(
+    "Unilateral cancellation migration contract passed; no SQL was executed.",
   );
   const contactSql = await readFile(
     "prisma/migrations/20261115000000_customer_contact/migration.sql",

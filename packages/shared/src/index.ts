@@ -1,5 +1,10 @@
+import {
+  canCancelRequest,
+  type CancellationEventMetadata,
+} from "./request-cancellation";
 export * from "./location";
 export * from "./contact";
+export * from "./request-cancellation";
 export type ExperienceMode = "client" | "provider";
 export interface HealthResponse {
   status: "ok";
@@ -156,7 +161,7 @@ export const REQUEST_TRANSITIONS: Record<
   {
     from: readonly RequestStatus[];
     to: RequestStatus;
-    actor: RequestParticipant;
+    actor: RequestParticipant | "either";
   }
 > = {
   accept: { from: ["REQUESTED"], to: "ACCEPTED", actor: "provider" },
@@ -177,7 +182,11 @@ export const REQUEST_TRANSITIONS: Record<
     to: "IN_PROGRESS",
     actor: "client",
   },
-  cancel: { from: ["REQUESTED", "ACCEPTED"], to: "CANCELLED", actor: "client" },
+  cancel: {
+    from: ["REQUESTED", "ACCEPTED", "IN_PROGRESS", "AWAITING_CONFIRMATION"],
+    to: "CANCELLED",
+    actor: "either",
+  },
 };
 export function allowedRequestActions(
   status: RequestStatus,
@@ -185,7 +194,9 @@ export function allowedRequestActions(
 ): RequestAction[] {
   return REQUEST_ACTIONS.filter(
     (action) =>
-      REQUEST_TRANSITIONS[action].actor === viewer &&
+      (action === "cancel"
+        ? canCancelRequest(status, viewer)
+        : REQUEST_TRANSITIONS[action].actor === viewer) &&
       REQUEST_TRANSITIONS[action].from.includes(status),
   );
 }
@@ -234,7 +245,7 @@ export interface ServiceRequestSummary {
   canReview?: boolean;
   reviewSubmitted?: boolean;
 }
-export interface RequestEventView {
+export interface RequestEventView extends CancellationEventMetadata {
   id: string;
   actor: RequestParticipant;
   previousStatus: RequestStatus | null;

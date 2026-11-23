@@ -339,7 +339,7 @@ test("complete lifecycle requires provider proposal, client confirmation and rec
     assert.equal(row.status, "ACCEPTED");
     row = (await (await f.act(row, "start")).json()) as ServiceRequestDetail;
     assert.equal(row.status, "IN_PROGRESS");
-    assert.equal((await f.act(row, "cancel", f.client)).status, 409);
+    assert.equal((await f.act(row, "cancel", f.client)).status, 400);
     row = (await (
       await f.act(row, "propose-completion")
     ).json()) as ServiceRequestDetail;
@@ -398,7 +398,17 @@ test("rejection and permitted cancellations are final and preserve accepted hist
       await f.act(await f.create(), "accept")
     ).json()) as ServiceRequestDetail;
     const later = (await (
-      await f.act(accepted, "cancel", f.client)
+      await f.call(
+        `requests/${accepted.id}/cancel`,
+        "POST",
+        {
+          version: accepted.version,
+          idempotencyKey: randomUUID(),
+          reasonCode: "PRICE_DISAGREEMENT",
+          confirmed: true,
+        },
+        f.client,
+      )
     ).json()) as ServiceRequestDetail;
     assert.equal(later.status, "CANCELLED");
     assert.equal(later.acceptedAt, accepted.acceptedAt);

@@ -1,0 +1,211 @@
+generator client {
+  provider   = "prisma-client-js"
+  output     = "../../../node_modules/.prisma/client"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String           @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  email           String           @unique @db.NVarChar(254)
+  displayName     String           @db.NVarChar(120)
+  hasWhatsapp Boolean @default(false)
+  phoneShareConsentedAt DateTime? @db.DateTime2
+  phone           String?          @db.NVarChar(25)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt       DateTime         @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  authCredential  AuthCredential?
+  authSessions    AuthSession[]
+  clientProfile   ClientProfile?
+  providerProfile ProviderProfile?
+  sentRequests ServiceRequest[] @relation("RequestClient")
+  receivedRequests ServiceRequest[] @relation("RequestProvider")
+  requestEvents ServiceRequestEvent[]
+  writtenReviews ServiceReview[] @relation("ReviewClient")
+  receivedReviews ServiceReview[] @relation("ReviewProvider")
+
+  @@index([isActive, createdAt])
+}
+
+model ClientProfile {
+  id        String   @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  userId    String   @unique @db.UniqueIdentifier
+  city      String   @default("Araranguá") @db.NVarChar(100)
+  state     String   @default("SC") @db.Char(2)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  user      User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model ProviderProfile {
+  id               String                @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  userId           String                @unique @db.UniqueIdentifier
+  professionalName String                @db.NVarChar(120)
+  bio              String?               @db.NVarChar(1000)
+  isActive         Boolean               @default(true)
+  createdAt        DateTime              @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt        DateTime              @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  user             User                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  services         ProviderService[]
+  serviceAreas     ProviderServiceArea[]
+  requests         ServiceRequest[]
+  reviews ServiceReview[]
+
+  @@index([isActive, createdAt])
+}
+
+model ServiceCategory {
+  id        String            @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  slug      String            @unique @db.NVarChar(80)
+  name      String            @db.NVarChar(80)
+  sortOrder Int               @default(0)
+  isActive  Boolean           @default(true)
+  createdAt DateTime          @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime          @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  services  ProviderService[]
+
+  @@index([isActive, sortOrder])
+}
+
+model ProviderService {
+  id          String          @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  providerId  String          @db.UniqueIdentifier
+  categoryId  String          @db.UniqueIdentifier
+  title       String          @db.NVarChar(120)
+  description String?         @db.NVarChar(1000)
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt   DateTime        @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  provider    ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category    ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  requests    ServiceRequest[]
+
+  @@unique([providerId, categoryId, title])
+  @@index([categoryId, isActive, providerId])
+}
+
+model ProviderServiceArea {
+  id           String          @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  providerId   String          @db.UniqueIdentifier
+  city         String          @db.NVarChar(100)
+  state        String          @db.Char(2)
+  neighborhood String          @default("") @db.NVarChar(100)
+  isActive     Boolean         @default(true)
+  createdAt    DateTime        @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt    DateTime        @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  provider     ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([providerId, state, city, neighborhood])
+  @@index([state, city, isActive, providerId])
+}
+
+model AuthCredential {
+  userId          String   @id @db.UniqueIdentifier
+  emailNormalized String   @unique @db.NVarChar(254)
+  passwordHash    String   @db.NVarChar(255)
+  createdAt       DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt       DateTime @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  user            User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model AuthSession {
+  id        String         @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  userId    String         @db.UniqueIdentifier
+  createdAt DateTime       @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime       @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  expiresAt DateTime       @db.DateTime2
+  revokedAt DateTime?      @db.DateTime2
+  user      User           @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  tokens    RefreshToken[]
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id         String      @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  sessionId  String      @db.UniqueIdentifier
+  tokenHash  String      @unique @db.Char(64)
+  createdAt  DateTime    @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  expiresAt  DateTime    @db.DateTime2
+  consumedAt DateTime?   @db.DateTime2
+  session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([sessionId])
+  @@index([expiresAt])
+}
+
+model ServiceRequest {
+  review ServiceReview?
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  clientUserId String @db.UniqueIdentifier
+  providerUserId String @db.UniqueIdentifier
+  providerId String @db.UniqueIdentifier
+  providerServiceId String @db.UniqueIdentifier
+  clientNameSnapshot String @db.NVarChar(120)
+  providerNameSnapshot String @db.NVarChar(120)
+  serviceTitleSnapshot String @db.NVarChar(120)
+  status String @default("REQUESTED") @db.NVarChar(32)
+  description String @db.NVarChar(1000)
+  city String @db.NVarChar(100)
+  state String @db.Char(2)
+  neighborhood String @default("") @db.NVarChar(100)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  updatedAt DateTime @default(dbgenerated("sysutcdatetime()")) @updatedAt @db.DateTime2
+  acceptedAt DateTime? @db.DateTime2
+  startedAt DateTime? @db.DateTime2
+  completionProposedAt DateTime? @db.DateTime2
+  completedAt DateTime? @db.DateTime2
+  cancelledAt DateTime? @db.DateTime2
+  version Int @default(1)
+  idempotencyKey String @db.UniqueIdentifier
+  client User @relation("RequestClient", fields: [clientUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  providerUser User @relation("RequestProvider", fields: [providerUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service ProviderService @relation(fields: [providerServiceId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  events ServiceRequestEvent[]
+  @@unique([clientUserId, idempotencyKey])
+  @@index([clientUserId, status, createdAt, id])
+  @@index([providerUserId, status, createdAt, id])
+}
+
+model ServiceRequestEvent {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  requestId String @db.UniqueIdentifier
+  actorUserId String @db.UniqueIdentifier
+  previousStatus String? @db.NVarChar(32)
+  newStatus String @db.NVarChar(32)
+  action String @db.NVarChar(32)
+  occurredAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  reason String? @db.NVarChar(500)
+  version Int
+  idempotencyKey String @db.UniqueIdentifier
+  payloadHash String @db.Char(64)
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor User @relation(fields: [actorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([actorUserId, idempotencyKey])
+  @@unique([requestId, version])
+}
+
+// One immutable, server-authored review per completed request in this phase.
+model ServiceReview {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  requestId String @unique @db.UniqueIdentifier
+  clientUserId String @db.UniqueIdentifier
+  providerUserId String @db.UniqueIdentifier
+  providerId String @db.UniqueIdentifier
+  rating Int
+  comment String? @db.NVarChar(1000)
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  client User @relation("ReviewClient", fields: [clientUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  providerUser User @relation("ReviewProvider", fields: [providerUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([providerId, createdAt, id])
+}

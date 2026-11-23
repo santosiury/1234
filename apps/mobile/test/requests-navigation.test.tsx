@@ -228,7 +228,12 @@ beforeEach(() => {
       if (action === "confirm-completion") row.completedAt = row.updatedAt;
       row.events.push({
         id: randomUUID(),
-        actor: rule.actor,
+        actor:
+          rule.actor === "either"
+            ? auth.value.id === providerUserId
+              ? "provider"
+              : "client"
+            : rule.actor,
         previousStatus: oldStatus,
         newStatus: row.status,
         occurredAt: row.updatedAt,
