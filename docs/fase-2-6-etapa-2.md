@@ -98,8 +98,8 @@ Além da regressão, foram executados typecheck, lint, build da API, Prisma gene
 ## Próximo passo — somente após nova autorização
 
 1. Revisar código, compatibilidade do app e o SQL preparado.
-2. Preparar configuração exclusiva de testes, sem fallback para DATABASE_URL/arquivo de migrations principal. O guard atual de migrations confere o banco e a identidade, mas **OminiDB existe nas duas instâncias**; isso não distingue principal/testes sozinho.
-3. Após autorização, confirmar explicitamente destino TCP `localhost:15433`, banco OminiDB e identidade da instância `OMINI_TEST` antes de qualquer migration. Nunca usar `localhost\\OMINI:1433` nesta validação. Não alterar credenciais locais existentes.
+2. Preparar configuração exclusiva de testes, sem fallback para DATABASE_URL/arquivo de migrations principal. A [correção do migration runner](fase-2-6-migration-runner.md) restringe status e deploy exclusivamente a `127.0.0.1:15433`, banco `OminiDB`, login `omini_migrator`, antes de iniciar Prisma.
+3. Após autorização, confirmar explicitamente que o destino TCP `127.0.0.1:15433` corresponde à instância `OMINI_TEST`, banco OminiDB, antes de qualquer migration. Nunca usar `localhost\\OMINI:1433` nesta validação. Não alterar credenciais locais existentes.
 4. Na instância de testes, comparar contagens e histórico, aplicar a migration com identidade separada, verificar constraints confiáveis, metadados antigos nulos, transições novas, rollback e privilégios mínimos. Usar somente dados de teste, inclusive cenários de trabalho parcial e conclusão alegada.
 5. Somente depois da validação SQL e aprovação seguinte, implementar as telas de cancelamento e testar no iPhone/Android. Não ativar produção automaticamente.
 

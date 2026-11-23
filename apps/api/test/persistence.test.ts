@@ -196,7 +196,9 @@ test("generated SQL Server client preserves business models and adds auth withou
 test("migration identity never falls back to runtime and rejects the wrong database", () => {
   const runtime =
     "sqlserver://127.0.0.1:1433;database=OminiDB;user=omini_app;password={fixture}";
-  const migration = runtime.replace("omini_app", "omini_migrator");
+  const migration = runtime
+    .replace(":1433", ":15433")
+    .replace("omini_app", "omini_migrator");
   assert.throws(() => migrationEnvironment({ DATABASE_URL: runtime }));
   assert.throws(() =>
     migrationEnvironment({ MIGRATION_DATABASE_URL: runtime }),
