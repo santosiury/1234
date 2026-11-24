@@ -3,7 +3,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { validateCancellationMigration } from "../scripts/cancellation-migration-validation";
+import {
+  cancellationMetadataBatch,
+  validateCancellationMigration,
+} from "../scripts/cancellation-migration-validation";
 const sqlPath =
   "prisma/migrations/20261123000000_unilateral_cancellation/migration.sql";
 async function files() {
@@ -20,13 +23,17 @@ async function files() {
 test("cancellation migration adds only nullable event metadata and expands the trusted transition CHECK transactionally without data writes", async () => {
   const [previous, current, old, sql] = await files();
   await validateCancellationMigration(previous, current, old, sql);
-  assert.match(sql, /\[reasonCode\] IS NOT NULL AND \[action\]=N'cancel'/);
+  const { metadataSql } = cancellationMetadataBatch(sql);
   assert.match(
-    sql,
+    metadataSql,
+    /\[reasonCode\] IS NOT NULL AND \[action\]=N'cancel'/,
+  );
+  assert.match(
+    metadataSql,
     /\[previousStatus\] IS NOT NULL AND \[previousStatus\] IN \(N'IN_PROGRESS',N'AWAITING_CONFIRMATION'\) AND \[newStatus\]=N'CANCELLED'/,
   );
   assert.match(
-    sql,
+    metadataSql,
     /\[executionContext\] IS NOT NULL AND \[executionContext\] IN/,
   );
   assert.match(current, /provider = "sqlserver"/);
@@ -34,6 +41,64 @@ test("cancellation migration adds only nullable event metadata and expands the t
     await readFile("prisma/migrations/migration_lock.toml", "utf8"),
     /provider = "mssql"/,
   );
+});
+test("metadata CHECK compiles in a nested batch after ADD without changing its original business expression", async () => {
+  const [, , , sql] = await files();
+  const batch = cancellationMetadataBatch(sql);
+  assert.ok(sql.indexOf("ADD [reasonCode]") < batch.index);
+  assert.ok(batch.index < sql.indexOf("COMMIT TRANSACTION"));
+  assert.doesNotMatch(batch.outerSql, /CHECK \(\s*\(\[reasonCode\]/);
+  // Original metadata DDL before the SQL 207 fix, with whitespace normalized.
+  // Only quoting/compilation boundaries may change in this repair.
+  assert.equal(
+    createHash("sha256")
+      .update(batch.metadataSql.replace(/\s/g, ""))
+      .digest("hex"),
+    "ceff00d6a6d3a4c952cabfcfa51c87d9ad23de0414c0d8a0102dc56eb4ae0e3d",
+  );
+});
+
+test("static checker rejects same-batch column references, GO, early compilation and DDL outside the transaction", async () => {
+  const [previous, current, old, sql] = await files();
+  const { metadataSql } = cancellationMetadataBatch(sql);
+  const invocation = sql.match(
+    /EXEC sys\.sp_executesql N'((?:''|[^'])*)';/,
+  )![0];
+  const add =
+    "ALTER TABLE [dbo].[ServiceRequestEvent] ADD [reasonCode] NVARCHAR(40) NULL, [executionContext] NVARCHAR(32) NULL;";
+  for (const changed of [
+    sql.replace(invocation, metadataSql),
+    sql.replace(add, "").replace(invocation, `${invocation}\n${add}`),
+    sql
+      .replace(invocation, "")
+      .replace("COMMIT TRANSACTION;", `COMMIT TRANSACTION;\n${invocation}`),
+    sql.replace(add, `${add}\nGO`),
+    sql.replace("EXEC sys.sp_executesql N'", "EXEC sys.sp_executesql '"),
+    sql.replace("N''cancel''", "N'cancel'"),
+    sql.replace(
+      invocation,
+      `SELECT [reasonCode] FROM [dbo].[ServiceRequestEvent];\n${invocation}`,
+    ),
+  ])
+    await assert.rejects(
+      validateCancellationMigration(previous, current, old, changed),
+    );
+});
+
+test("dynamic quoting cannot hide writes, an untrusted metadata CHECK or missing business codes from static validation", async () => {
+  const [previous, current, old, sql] = await files();
+  for (const changed of [
+    sql.replace(
+      "WITH CHECK ADD CONSTRAINT [ServiceRequestEvent_cancellation_metadata_check]",
+      "WITH NOCHECK ADD CONSTRAINT [ServiceRequestEvent_cancellation_metadata_check]",
+    ),
+    sql.replace("N''PRICE_DISAGREEMENT''", "N''UNKNOWN_REASON''"),
+    sql.replace("N''DISPUTED''", "N''UNKNOWN_CONTEXT''"),
+    sql.replace("\n';", "\nDELETE FROM [dbo].[ServiceRequestEvent];\n';"),
+  ])
+    await assert.rejects(
+      validateCancellationMigration(previous, current, old, changed),
+    );
 });
 test("static checker rejects weakening existing transitions, untrusted constraints, destructive writes and silent loss of rollback", async () => {
   const [previous, current, old, sql] = await files();

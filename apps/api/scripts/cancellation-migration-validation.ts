@@ -5,13 +5,86 @@ import {
   CANCELLATION_REASON_CODES,
 } from "@omini/shared";
 
+const addMetadataColumns =
+  "ALTER TABLE [dbo].[ServiceRequestEvent] ADD [reasonCode] NVARCHAR(40) NULL, [executionContext] NVARCHAR(32) NULL;";
+
+/** Decode the one fixed DDL literal; this does not evaluate or execute T-SQL. */
+export function cancellationMetadataBatch(source: string) {
+  assert.doesNotMatch(
+    source,
+    /^\s*GO\b/gim,
+    "Prisma migration must remain one outer batch",
+  );
+  const calls = [
+    ...source.matchAll(/EXEC sys\.sp_executesql N'((?:''|[^'])*)';/g),
+  ];
+  assert.equal(
+    calls.length,
+    1,
+    "Metadata CHECK needs one separate compilation batch",
+  );
+  const call = calls[0];
+  const metadataSql = call[1].replace(/''/g, "'").trim();
+  const outerSql =
+    source.slice(0, call.index) + source.slice(call.index + call[0].length);
+  // Ignore quoted messages and line comments, e.g. "Do not execute", when
+  // looking for additional executable statements in this fixed SQL contract.
+  const outerCode = outerSql.replace(/N?'(?:''|[^'])*'|--[^\r\n]*/g, "");
+  assert.doesNotMatch(
+    outerCode,
+    /\bEXEC(?:UTE)?\b|\bsp_executesql\b/i,
+    "Only the fixed metadata DDL may be dynamic",
+  );
+  assert.match(
+    metadataSql,
+    /^ALTER TABLE \[dbo\]\.\[ServiceRequestEvent\] WITH CHECK ADD CONSTRAINT \[ServiceRequestEvent_cancellation_metadata_check\] CHECK \([\s\S]*\);$/,
+  );
+  assert.equal(
+    (metadataSql.match(/;/g) ?? []).length,
+    1,
+    "Dynamic batch must contain only the metadata CHECK",
+  );
+  assert.doesNotMatch(metadataSql, /\bEXEC(?:UTE)?\b|^\s*GO\b/gim);
+  assert.ok(outerSql.includes(addMetadataColumns));
+  assert.doesNotMatch(
+    outerSql.replace(addMetadataColumns, ""),
+    /\[(?:reasonCode|executionContext)\]/,
+    "New column references must not be compiled in the outer batch",
+  );
+  return {
+    metadataSql,
+    outerSql,
+    index: call.index,
+    logicalSql:
+      source.slice(0, call.index) +
+      metadataSql +
+      source.slice(call.index + call[0].length),
+  };
+}
+
 /** Static contract only: never instantiates a driver or executes SQL. */
 export async function validateCancellationMigration(
   previous: string,
   current: string,
   oldSql: string,
-  sql: string,
+  sourceSql: string,
 ) {
+  const batch = cancellationMetadataBatch(sourceSql);
+  const begin = sourceSql.indexOf("BEGIN TRANSACTION");
+  const add = sourceSql.indexOf(addMetadataColumns);
+  const commit = sourceSql.indexOf("COMMIT TRANSACTION");
+  assert.ok(sourceSql.indexOf("BEGIN TRY") < begin);
+  assert.ok(
+    begin >= 0 && begin < add && add < batch.index && batch.index < commit,
+  );
+  assert.ok(commit < sourceSql.indexOf("END TRY"));
+  assert.match(
+    batch.outerSql,
+    /BEGIN CATCH\s+IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;\s+THROW;\s+END CATCH;/,
+  );
+  // Inspect decoded SQL too: escaping a literal must not hide weakening or writes
+  // from the existing static checks. This is not a SQL Server compilation test.
+  const sql = batch.logicalSql;
   const before = (await getDMMF({ datamodel: previous })).datamodel;
   const after = (await getDMMF({ datamodel: current })).datamodel;
   assert.equal(after.models.length, before.models.length);

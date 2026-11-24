@@ -24,18 +24,22 @@ ALTER TABLE [dbo].[ServiceRequestEvent] WITH CHECK ADD CONSTRAINT [ServiceReques
 );
 ALTER TABLE [dbo].[ServiceRequestEvent] CHECK CONSTRAINT [ServiceRequestEvent_transition_check];
 -- NULL metadata preserves historical events. Newly admitted started cancellations require context.
+-- Compile references to the new columns only after ALTER TABLE ADD executes.
+-- The nested batch shares this transaction; errors reach the outer CATCH.
+EXEC sys.sp_executesql N'
 ALTER TABLE [dbo].[ServiceRequestEvent] WITH CHECK ADD CONSTRAINT [ServiceRequestEvent_cancellation_metadata_check] CHECK (
   ([reasonCode] IS NULL AND [executionContext] IS NULL AND NOT (
-    [previousStatus] IS NOT NULL AND [previousStatus] IN (N'IN_PROGRESS',N'AWAITING_CONFIRMATION') AND [newStatus]=N'CANCELLED'
+    [previousStatus] IS NOT NULL AND [previousStatus] IN (N''IN_PROGRESS'',N''AWAITING_CONFIRMATION'') AND [newStatus]=N''CANCELLED''
   )) OR
-  ([reasonCode] IS NOT NULL AND [action]=N'cancel' AND [newStatus]=N'CANCELLED'
-    AND [previousStatus] IS NOT NULL AND [previousStatus] IN (N'REQUESTED',N'ACCEPTED',N'IN_PROGRESS',N'AWAITING_CONFIRMATION')
-    AND [reasonCode] IN (N'PRICE_DISAGREEMENT',N'SCHEDULE_DISAGREEMENT',N'SCOPE_DISAGREEMENT',N'SERVICE_NO_LONGER_NEEDED',N'UNABLE_TO_ATTEND',N'OTHER')
-    AND [reason] IS NOT NULL AND (([reasonCode]=N'OTHER' AND LEN(LTRIM(RTRIM([reason]))) BETWEEN 10 AND 500) OR ([reasonCode]<>N'OTHER' AND LEN(LTRIM(RTRIM([reason]))) BETWEEN 1 AND 500))
-    AND (([executionContext] IS NULL AND [previousStatus] NOT IN (N'IN_PROGRESS',N'AWAITING_CONFIRMATION')) OR
-         ([executionContext] IS NOT NULL AND [executionContext] IN (N'NONE',N'PARTIAL',N'FULL_CLAIMED',N'DISPUTED')))
+  ([reasonCode] IS NOT NULL AND [action]=N''cancel'' AND [newStatus]=N''CANCELLED''
+    AND [previousStatus] IS NOT NULL AND [previousStatus] IN (N''REQUESTED'',N''ACCEPTED'',N''IN_PROGRESS'',N''AWAITING_CONFIRMATION'')
+    AND [reasonCode] IN (N''PRICE_DISAGREEMENT'',N''SCHEDULE_DISAGREEMENT'',N''SCOPE_DISAGREEMENT'',N''SERVICE_NO_LONGER_NEEDED'',N''UNABLE_TO_ATTEND'',N''OTHER'')
+    AND [reason] IS NOT NULL AND (([reasonCode]=N''OTHER'' AND LEN(LTRIM(RTRIM([reason]))) BETWEEN 10 AND 500) OR ([reasonCode]<>N''OTHER'' AND LEN(LTRIM(RTRIM([reason]))) BETWEEN 1 AND 500))
+    AND (([executionContext] IS NULL AND [previousStatus] NOT IN (N''IN_PROGRESS'',N''AWAITING_CONFIRMATION'')) OR
+         ([executionContext] IS NOT NULL AND [executionContext] IN (N''NONE'',N''PARTIAL'',N''FULL_CLAIMED'',N''DISPUTED'')))
   )
 );
+';
 COMMIT TRANSACTION;
 END TRY
 BEGIN CATCH

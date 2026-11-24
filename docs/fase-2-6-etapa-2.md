@@ -57,9 +57,11 @@ Recibos existentes são verificados **antes** de exigir novos campos ou aplicar 
 
 Ao atingir CANCELLED, os endpoints de contato existentes deixam de autorizar novas consultas. A abertura de WhatsApp/telefone no app já reconsulta a autorização; dados obtidos fora do Omini anteriormente não podem ser apagados retroativamente. Avaliações continuam exigindo COMPLETED e evento legítimo de confirmação. FULL_CLAIMED no cancelamento não dá direito a avaliar nem muda médias de serviços anteriores.
 
-## Migration preparada — NÃO EXECUTADA
+## Migration preparada — execução na nuvem não realizada
 
 Arquivo: `apps/api/prisma/migrations/20261123000000_unilateral_cancellation/migration.sql`.
+
+Atualização SQL 207: o responsável informou uma tentativa falha em `OMINI_TEST`, com colunas ausentes e dados/constraint anterior preservados. A criação da constraint de metadados foi movida para um lote interno `sys.sp_executesql`, compilado após o ADD e dentro da mesma transação, sem alterar sua expressão. Veja o [diagnóstico, limites da validação e procedimento futuro de recuperação](fase-2-6-recuperacao-sql207.md). Nenhum resolve/deploy ou acesso SQL foi executado pela nuvem.
 
 1. Confere banco OminiDB, existência da tabela/constraint e ausência das novas colunas, recusando estados parciais inesperados.
 2. Adiciona somente `ServiceRequestEvent.reasonCode NVARCHAR(40) NULL` e `executionContext NVARCHAR(32) NULL`, sem default/backfill.
