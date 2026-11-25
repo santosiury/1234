@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "test": "npm run test --workspaces --if-present",
     "check:routes": "node scripts/check-routes.mjs",
+    "check:mobile-runtime": "node scripts/check-mobile-runtime.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "prisma:generate": "npm run prisma:generate -w @omini/api",
     "assets:brand": "node scripts/generate-brand-assets.mjs",

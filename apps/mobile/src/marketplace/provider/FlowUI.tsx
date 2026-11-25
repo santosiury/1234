@@ -119,7 +119,7 @@ const help: Record<HelpTopic, { title: string; text: string }[]> = {
     },
     {
       title: "Quem confirma a conclusão?",
-      text: "O prestador informa que terminou. Só o cliente pode confirmar, ou explicar o que ainda precisa ser finalizado. Não há cancelamento após o início nesta etapa.",
+      text: "O prestador informa que terminou. Só o cliente pode confirmar, ou explicar o que ainda precisa ser finalizado. Quando o cancelamento estiver disponível, informe o motivo e, se o atendimento já foi iniciado, a situação de execução. Cancelar não confirma a conclusão nem permite avaliar o atendimento.",
     },
   ],
   "new-request": [

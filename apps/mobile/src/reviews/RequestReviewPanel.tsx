@@ -29,7 +29,7 @@ export function RequestReviewPanel({
       <RemoteStatus {...result} />
       {r ? (
         <>
-          <Text style={ui.text}>Avaliação publicada · {r.rating} de 5</Text>
+          <Text style={ui.text}>Avaliação publicada · {r.rating} ⭐</Text>
           <Text style={ui.small}>
             {new Date(r.createdAt).toLocaleDateString("pt-BR")}
           </Text>

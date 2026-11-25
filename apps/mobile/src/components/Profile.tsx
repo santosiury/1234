@@ -7,6 +7,7 @@ import { Text, View } from "react-native";
 import { router } from "expo-router";
 import type { HealthResponse } from "@omini/shared";
 import { useMode } from "../mode";
+import { MOBILE_UI_REVISION, runtimeApiLabel } from "../dev/runtime";
 import {
   ScreenContainer,
   Header,
@@ -65,7 +66,9 @@ export function Profile({
       const data: HealthResponse = await response.json();
       if (data.status !== "ok" || !Number.isFinite(Date.parse(data.timestamp)))
         throw new Error("Resposta inesperada da API.");
-      setMessage("API conectada. Health check recebido com sucesso.");
+      setMessage(
+        "A API respondeu ao health check. Esta consulta não valida o banco nem o cancelamento.",
+      );
     } catch (error) {
       setMessage(
         error instanceof Error && error.message.startsWith("Configure")
@@ -219,6 +222,12 @@ export function Profile({
       {catalogSource === "demo" && <DemoNotice />}
       <View style={ui.card}>
         <Text style={ui.section}>Conexão com a API</Text>
+        {__DEV__ && (
+          <View style={ui.group}>
+            <Text style={ui.small}>Revisão mobile: {MOBILE_UI_REVISION}</Text>
+            <Text style={ui.small}>API do app: {runtimeApiLabel(baseUrl)}</Text>
+          </View>
+        )}
         <Text style={ui.text}>
           Este diagnóstico consulta apenas o health check. Não envia dados
           pessoais.

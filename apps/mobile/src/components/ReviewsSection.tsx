@@ -55,13 +55,13 @@ export function ReviewsSection({
             />
           )}
         </>
-      ) : state.status === "ready" ? (
+      ) : state.status === "ready" && state.count > 0 ? (
         <>
           <Text style={ui.text}>
             {state.average.toLocaleString("pt-BR", {
               maximumFractionDigits: 1,
             })}{" "}
-            de 5 · {state.count}{" "}
+            ⭐ · {state.count}{" "}
             {state.count === 1 ? "avaliação recebida" : "avaliações recebidas"}
           </Text>
           {state.received.map((review) => (
@@ -95,7 +95,7 @@ function ReviewComment({ review }: { review: ReviewCommentView }) {
   return (
     <View style={ui.group}>
       <Text style={ui.text}>
-        {review.authorLabel} · {review.rating} de 5
+        {review.authorLabel} · {review.rating} ⭐
       </Text>
       {!!review.createdAt && (
         <Text style={ui.small}>

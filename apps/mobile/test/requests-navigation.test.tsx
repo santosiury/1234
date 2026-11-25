@@ -10,13 +10,16 @@ import * as SecureStore from "expo-secure-store";
 import { randomUUID } from "node:crypto";
 import {
   REQUEST_TRANSITIONS,
+  CANCELLATION_REASON_LABELS,
   allowedRequestActions,
   type CreateRequestInput,
   type PublicProvider,
   type ServiceRequestDetail,
   type RequestAction,
   type RequestActionInput,
+  type CancelRequestInput,
 } from "@omini/shared";
+import { RequestsApi } from "../src/requests/api";
 import { AuthApi, AuthFailure } from "../src/auth/api";
 import { MarketplaceHttp } from "../src/marketplace/api";
 import { FakeAuthApi } from "./support/auth-fakes";
@@ -59,17 +62,21 @@ let auth: FakeAuthApi,
   rows: ServiceRequestDetail[],
   keys: Map<string, string>,
   createCalls: CreateRequestInput[],
-  actionCalls: { action: RequestAction; input: RequestActionInput }[],
+  actionCalls: {
+    action: RequestAction;
+    input: RequestActionInput | CancelRequestInput;
+  }[],
+  forcedActions: RequestAction[] | undefined,
   afterCommitFailure: boolean,
   storageFailure: boolean;
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-function viewed(row: ServiceRequestDetail) {
+function viewed(row: ServiceRequestDetail): ServiceRequestDetail {
   const viewer = auth.value.id === providerUserId ? "provider" : "client";
   return {
     ...clone(row),
     eventTotal: row.version,
     viewer,
-    allowedActions: allowedRequestActions(row.status, viewer),
+    allowedActions: forcedActions ?? allowedRequestActions(row.status, viewer),
   };
 }
 const originalAreas = clone(person.areas);
@@ -81,6 +88,7 @@ beforeEach(() => {
   keys = new Map();
   createCalls = [];
   actionCalls = [];
+  forcedActions = undefined;
   afterCommitFailure = false;
   storageFailure = false;
   jest
@@ -209,7 +217,7 @@ beforeEach(() => {
       if (!row)
         throw new AuthFailure(404, "NOT_FOUND", "Solicitação não encontrada.");
       if (method === "GET") return viewed(row);
-      const input = body as RequestActionInput,
+      const input = body as RequestActionInput | CancelRequestInput,
         rule = REQUEST_TRANSITIONS[action as RequestAction];
       actionCalls.push({
         action: action as RequestAction,
@@ -225,7 +233,13 @@ beforeEach(() => {
       row.status = rule.to;
       row.version++;
       row.updatedAt = new Date().toISOString();
+      if (action === "accept") row.acceptedAt = row.updatedAt;
+      if (action === "start") row.startedAt = row.updatedAt;
+      if (action === "propose-completion")
+        row.completionProposedAt = row.updatedAt;
       if (action === "confirm-completion") row.completedAt = row.updatedAt;
+      if (action === "cancel") row.cancelledAt = row.updatedAt;
+      const cancellation = "reasonCode" in input ? input : null;
       row.events.push({
         id: randomUUID(),
         actor:
@@ -237,7 +251,17 @@ beforeEach(() => {
         previousStatus: oldStatus,
         newStatus: row.status,
         occurredAt: row.updatedAt,
-        reason: input.reason ?? null,
+        reason:
+          input.reason ??
+          (cancellation
+            ? CANCELLATION_REASON_LABELS[cancellation.reasonCode]
+            : null),
+        ...(cancellation
+          ? {
+              reasonCode: cancellation.reasonCode,
+              executionContext: cancellation.executionContext ?? null,
+            }
+          : {}),
         version: row.version,
       });
       return viewed(row);
@@ -385,6 +409,322 @@ test("client reviews and sends once, provider executes, client reopens then conf
   expect(rows[0].completedAt).not.toBeNull();
   expect(screen.queryByText("Cancelar solicitação")).toBeNull();
 });
+test("provider can cancel after acceptance, and the confirmed status/history survive a failed refresh", async () => {
+  await clientEntry();
+  await openForm();
+  await send();
+  await switchAccount(true);
+  await detail();
+  await confirm("Aceitar");
+  const version = rows[0].version;
+  jest.spyOn(RequestsApi.prototype, "detail").mockImplementation(async () => {
+    if (rows[0].status === "CANCELLED")
+      throw new AuthFailure(0, "NETWORK_ERROR", "Atualização indisponível.");
+    return viewed(rows[0]);
+  });
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Cancelar solicitação" }),
+  );
+  expect(
+    screen.queryByRole("radio", { name: "Não preciso mais deste atendimento" }),
+  ).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("radio", {
+      name: "Não chegamos a um acordo sobre o valor",
+    }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  expect(actionCalls.filter((call) => call.action === "cancel")).toHaveLength(
+    0,
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Confirmar cancelamento" }),
+  );
+  await screen.findByText("Solicitação cancelada.");
+  expect(screen.getByText("Cancelada")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Cancelar solicitação" }),
+  ).toBeNull();
+  expect(screen.queryByText("Iniciar atendimento")).toBeNull();
+  expect(actionCalls.at(-1)).toMatchObject({
+    action: "cancel",
+    input: {
+      version,
+      reasonCode: "PRICE_DISAGREEMENT",
+      confirmed: true,
+      idempotencyKey: expect.stringMatching(/^[0-9a-f-]{36}$/),
+    },
+  });
+  expect(actionCalls.at(-1)!.input).not.toHaveProperty("reason");
+  await fireEvent.press(screen.getByText("Consultar histórico"));
+  expect(
+    await screen.findByText("Não chegamos a um acordo sobre o valor"),
+  ).toBeTruthy();
+  expect(rows[0].events.at(-1)).toMatchObject({
+    actor: "provider",
+    newStatus: "CANCELLED",
+    reasonCode: "PRICE_DISAGREEMENT",
+  });
+});
+
+test("client cancels an in-progress service with execution context and sees it in immutable history", async () => {
+  await clientEntry();
+  await openForm();
+  await send();
+  await switchAccount(true);
+  await detail();
+  await confirm("Aceitar");
+  await confirm("Iniciar atendimento");
+  await switchAccount(false);
+  await detail();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Cancelar solicitação" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("radio", { name: "Não preciso mais deste atendimento" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  expect(actionCalls.filter((call) => call.action === "cancel")).toHaveLength(
+    0,
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    /Informe a situação de execução/,
+  );
+  await fireEvent.press(
+    screen.getByRole("radio", { name: "Trabalho parcialmente executado" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Confirmar cancelamento" }),
+  );
+  await screen.findByText("Solicitação cancelada.");
+  expect(actionCalls.at(-1)).toMatchObject({
+    action: "cancel",
+    input: {
+      reasonCode: "SERVICE_NO_LONGER_NEEDED",
+      executionContext: "PARTIAL",
+      confirmed: true,
+    },
+  });
+  expect(screen.queryByText("Avalie o atendimento")).toBeNull();
+  await fireEvent.press(screen.getByText("Consultar histórico"));
+  expect(
+    await screen.findByText(
+      "Situação informada: Trabalho parcialmente executado",
+    ),
+  ).toBeTruthy();
+  expect(rows[0].events.at(-1)).toMatchObject({
+    actor: "client",
+    previousStatus: "IN_PROGRESS",
+    newStatus: "CANCELLED",
+    executionContext: "PARTIAL",
+  });
+});
+
+test("API allowedActions, rather than local eligibility, controls whether cancellation is offered", async () => {
+  await clientEntry();
+  await openForm();
+  await send();
+  rows[0].status = "ACCEPTED";
+  forcedActions = [];
+  await detail();
+  expect(screen.getByText("Aceita")).toBeTruthy();
+  expect(screen.queryByText("Cancelar solicitação")).toBeNull();
+});
+
+test("the client REQUESTED route reaches the structured dialog and never sends the legacy optional-reason body", async () => {
+  await clientEntry();
+  await openForm();
+  await send();
+  await detail();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Cancelar solicitação" }),
+  );
+  expect(screen.queryByLabelText("Motivo da ação")).toBeNull();
+  expect(
+    screen.queryByText(/encerra a solicitação antes do início/),
+  ).toBeNull();
+  await fireEvent.press(
+    screen.getByRole("radio", { name: "Não preciso mais deste atendimento" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  expect(actionCalls).toHaveLength(0);
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Confirmar cancelamento" }),
+  );
+  await screen.findByText("Solicitação cancelada.");
+  expect(actionCalls.at(-1)).toMatchObject({
+    action: "cancel",
+    input: {
+      reasonCode: "SERVICE_NO_LONGER_NEEDED",
+      confirmed: true,
+      version: 1,
+    },
+  });
+});
+
+test.each(["client", "provider"] as const)(
+  "the %s route cancels AWAITING_CONFIRMATION with the current execution contract",
+  async (side) => {
+    await clientEntry();
+    await openForm();
+    await send();
+    await switchAccount(true);
+    await detail();
+    await confirm("Aceitar");
+    await confirm("Iniciar atendimento");
+    await confirm("Informar conclusão");
+    if (side === "client") {
+      await switchAccount(false);
+      await detail();
+    }
+    expect(
+      screen.queryByText(/cancelamento após o início não está disponível/),
+    ).toBeNull();
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Cancelar solicitação" }),
+    );
+    await fireEvent.press(
+      screen.getByRole("radio", {
+        name: "Não chegamos a um acordo sobre o valor",
+      }),
+    );
+    await fireEvent.press(
+      screen.getByRole("radio", { name: "Situação de execução contestada" }),
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Revisar cancelamento" }),
+    );
+    await fireEvent.press(
+      screen.getByRole("button", { name: "Confirmar cancelamento" }),
+    );
+    await screen.findByText("Solicitação cancelada.");
+    expect(actionCalls.at(-1)).toMatchObject({
+      action: "cancel",
+      input: {
+        reasonCode: "PRICE_DISAGREEMENT",
+        executionContext: "DISPUTED",
+        confirmed: true,
+      },
+    });
+    expect(rows[0].events.at(-1)).toMatchObject({
+      actor: side,
+      newStatus: "CANCELLED",
+    });
+  },
+);
+
+test("an expired cancellation session returns to login without a mutation and does not auto-replay after signing in", async () => {
+  await clientEntry();
+  await openForm();
+  await send();
+  await detail();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Cancelar solicitação" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("radio", {
+      name: "Não chegamos a um acordo sobre o valor",
+    }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  auth.forceUnauthorized = true;
+  auth.failRefresh = new AuthFailure(
+    401,
+    "SESSION_EXPIRED",
+    "Sua sessão expirou. Entre novamente.",
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Confirmar cancelamento" }),
+  );
+  await screen.findByLabelText("Senha");
+  expect(screen.getByText("Sua sessão expirou. Entre novamente.")).toBeTruthy();
+  expect(actionCalls).toHaveLength(0);
+  auth.forceUnauthorized = false;
+  auth.failRefresh = null;
+  await login();
+  await screen.findByText("De que você precisa hoje?");
+  await testRouter.push("/client/requests");
+  await detail();
+  await screen.findByRole("header", { name: "Detalhes da solicitação" });
+  expect(rows[0].status).toBe("REQUESTED");
+  expect(actionCalls).toHaveLength(0);
+});
+
+test("a cancellation version conflict reloads the request before a new reviewed intent can be sent", async () => {
+  await clientEntry();
+  await openForm();
+  await send();
+  await detail();
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Cancelar solicitação" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("radio", {
+      name: "Não chegamos a um acordo sobre o valor",
+    }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  rows[0].status = "ACCEPTED";
+  rows[0].version++;
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Confirmar cancelamento" }),
+  );
+  await screen.findByText(
+    "A solicitação mudou. Atualize antes de tentar novamente.",
+  );
+  expect(
+    screen.queryByRole("header", { name: "Confirmar cancelamento?" }),
+  ).toBeNull();
+  await screen.findByText("Aceita");
+  const first = actionCalls.at(-1)!.input;
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Cancelar solicitação" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("radio", {
+      name: "Não chegamos a um acordo sobre o valor",
+    }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Revisar cancelamento" }),
+  );
+  await fireEvent.press(
+    screen.getByRole("button", { name: "Confirmar cancelamento" }),
+  );
+  await screen.findByText("Solicitação cancelada.");
+  expect(actionCalls.at(-1)!.input.version).toBe(first.version + 1);
+  expect(actionCalls.at(-1)!.input.idempotencyKey).not.toBe(
+    first.idempotencyKey,
+  );
+});
+
+test.each(["COMPLETED", "REJECTED", "CANCELLED"] as const)(
+  "terminal %s never exposes mutation actions, including a stale cancel hint",
+  async (status) => {
+    await clientEntry();
+    await openForm();
+    await send();
+    rows[0].status = status;
+    forcedActions = ["cancel"];
+    await detail();
+    expect(screen.queryByText("Cancelar solicitação")).toBeNull();
+    expect(actionCalls).toHaveLength(0);
+  },
+);
+
 test("guest request intent survives login and never creates before explicit review and confirmation", async () => {
   await renderRouter(routes);
   await fireEvent.press(screen.getByText("Explorar Omini"));

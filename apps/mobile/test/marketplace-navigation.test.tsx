@@ -1265,7 +1265,7 @@ test("professional profile and public real catalog query empty reviews without i
       "Depois de realizar serviços pelo Omini, seus clientes poderão avaliar seu atendimento.",
     ),
   ).toBeTruthy();
-  expect(screen.queryByText(/de 5 ·/)).toBeNull();
+  expect(screen.queryByText(/⭐ ·/)).toBeNull();
   await fireEvent.press(screen.getByRole("button", { name: "Minha conta" }));
   await fireEvent.press(
     await screen.findByRole("button", { name: "Mudar para cliente" }),
@@ -1278,7 +1278,7 @@ test("professional profile and public real catalog query empty reviews without i
     await screen.findByRole("header", { name: "Avaliações" }),
   ).toBeTruthy();
   expect(await screen.findByText("Ainda não há avaliações.")).toBeTruthy();
-  expect(screen.queryByText(/de 5 ·/)).toBeNull();
+  expect(screen.queryByText(/⭐ ·/)).toBeNull();
   expect(
     requests.some(
       (request) => /reviews/.test(request.path) && request.method !== "GET",

@@ -108,7 +108,7 @@ function ReviewForm({ id }: { id: string }) {
       {existing ? (
         <View style={ui.card}>
           <Text style={ui.section}>Sua avaliação já foi publicada</Text>
-          <Text style={ui.text}>{existing.rating} de 5</Text>
+          <Text style={ui.text}>{existing.rating} ⭐</Text>
           {!!existing.comment && (
             <Text style={ui.text}>{existing.comment}</Text>
           )}

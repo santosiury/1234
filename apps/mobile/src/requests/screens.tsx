@@ -1,4 +1,5 @@
 import { RequestReviewPanel } from "../reviews/RequestReviewPanel";
+import { CancellationDialog } from "./CancellationDialog";
 import { useMonitorRefresh } from "./useMonitorRefresh";
 import { RequestContactPanel } from "../contact/RequestContactPanel";
 import { useRequestUpdates, updateMessage } from "./notifications/provider";
@@ -14,11 +15,14 @@ import {
 import { randomUUID } from "expo-crypto";
 import {
   REQUEST_STATUS_LABELS,
+  FINAL_REQUEST_STATUSES,
+  CANCELLATION_EXECUTION_LABELS,
   type RequestAction,
   type RequestActionInput,
   type RequestParticipant,
   type RequestStatus,
   type RequestEventView,
+  type ServiceRequestDetail,
 } from "@omini/shared";
 import { useSession } from "../auth/session";
 import { AuthFailure } from "../auth/api";
@@ -242,7 +246,7 @@ const actions: Record<
     title: "Iniciar atendimento",
     confirmation: "Iniciar atendimento?",
     description:
-      "Combine o atendimento com o cliente antes de iniciar. Após o início, o cancelamento não estará disponível nesta etapa.",
+      "Combine o atendimento com o cliente antes de iniciar. Caso seja necessário cancelar depois, será preciso informar a situação de execução.",
   },
   "propose-completion": {
     title: "Informar conclusão",
@@ -266,7 +270,7 @@ const actions: Record<
     title: "Cancelar solicitação",
     confirmation: "Cancelar solicitação?",
     description:
-      "Esta ação encerra a solicitação antes do início e não poderá ser desfeita.",
+      "Informe um motivo e confira a confirmação antes de encerrar esta solicitação.",
   },
 };
 export function RequestDetailScreen({ side }: { side: RequestParticipant }) {
@@ -312,11 +316,16 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
     useCallback(() => api.detail(id), [api, id]),
     true,
   );
+  const [committed, setCommitted] = useState<ServiceRequestDetail | null>(null);
+  // A confirmed POST is authoritative even if the following refresh is delayed.
+  const row =
+    committed && (!result.data || committed.version > result.data.version)
+      ? committed
+      : result.data;
   useFocusEffect(
     useCallback(() => {
-      if (result.data && session.user)
-        monitor?.viewed(result.data, session.user.id);
-    }, [monitor, result.data, session.user?.id]),
+      if (row && session.user) monitor?.viewed(row, session.user.id);
+    }, [monitor, row, session.user?.id]),
   );
   const [history, setHistory] = useState(false);
   const [events, setEvents] = useState<RequestEventView[]>([]);
@@ -324,17 +333,15 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
     [historyError, setHistoryError] = useState("");
   const historyFlight = useRef(false);
   useEffect(() => {
-    if (result.data)
+    if (row)
       setEvents((old) =>
         [
           ...old,
-          ...result.data!.events.filter(
-            (item) => !old.some((e) => e.id === item.id),
-          ),
+          ...row.events.filter((item) => !old.some((e) => e.id === item.id)),
         ].sort((a, b) => a.version - b.version),
       );
     setHistoryError("");
-  }, [result.data]);
+  }, [row]);
   async function moreHistory() {
     if (historyFlight.current) return;
     historyFlight.current = true;
@@ -354,7 +361,7 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
     }
   }
   const [pending, setPending] = useState<{
-      action: RequestAction;
+      action: Exclude<RequestAction, "cancel">;
       input: RequestActionInput;
       submitted?: boolean;
     } | null>(null),
@@ -363,12 +370,36 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
   const inFlight = useRef(false);
-  useMonitorRefresh(result.reload, updates.revision, !busy && !pending);
-  const row = result.data;
+  const [cancellation, setCancellation] = useState<ServiceRequestDetail | null>(
+    null,
+  );
+  useMonitorRefresh(
+    result.reload,
+    updates.revision,
+    !busy && !pending && !cancellation,
+  );
+  function acceptedUpdate(updated: ServiceRequestDetail) {
+    setCommitted(updated);
+    if (session.user) monitor?.viewed(updated, session.user.id);
+    void monitor?.refresh(true);
+    result.reload();
+  }
   function open(action: RequestAction) {
-    if (!row) return;
+    if (
+      !row ||
+      busy ||
+      result.loading ||
+      !!result.error ||
+      !row.allowedActions.includes(action) ||
+      FINAL_REQUEST_STATUSES.includes(row.status)
+    )
+      return;
     setError("");
     setReason("");
+    if (action === "cancel") {
+      setCancellation(row);
+      return;
+    }
     setPending({
       action,
       input: { version: row.version, idempotencyKey: randomUUID() },
@@ -393,12 +424,10 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
     setPending({ ...pending, input, submitted: true });
     try {
       const updated = await api.act(id, pending.action, input);
-      if (session.user) monitor?.viewed(updated, session.user.id);
-      void monitor?.refresh(true);
+      acceptedUpdate(updated);
       setPending(null);
       setReason("");
       setMessage("Solicitação atualizada.");
-      result.reload();
     } catch (e) {
       setError(errorMessage(e));
       if (e instanceof AuthFailure && e.status === 400)
@@ -461,18 +490,15 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
               </Text>
             </View>
           )}
-          {(row.status === "IN_PROGRESS" ||
-            row.status === "AWAITING_CONFIRMATION") && (
-            <Text style={ui.small}>
-              O cancelamento após o início não está disponível nesta etapa.
-              Contestação e suporte serão adicionados em uma fase futura.
-            </Text>
-          )}
-          {row.allowedActions.map((action, index) => (
+          {(FINAL_REQUEST_STATUSES.includes(row.status)
+            ? []
+            : row.allowedActions
+          ).map((action, index) => (
             <PrimaryButton
               key={action}
               secondary={index > 0 || action === "cancel"}
               title={actions[action].title}
+              disabled={busy || result.loading || !!result.error}
               onPress={() => open(action)}
             />
           ))}
@@ -501,6 +527,12 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
                   </Text>
                   {!!event.reason && (
                     <Text style={ui.text}>{event.reason}</Text>
+                  )}
+                  {!!event.executionContext && (
+                    <Text style={ui.small}>
+                      Situação informada:{" "}
+                      {CANCELLATION_EXECUTION_LABELS[event.executionContext]}
+                    </Text>
                   )}
                 </View>
               ))}
@@ -538,9 +570,7 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
         {pending && (
           <>
             <Text style={ui.text}>{actions[pending.action].description}</Text>
-            {(pending.action === "reopen" ||
-              pending.action === "reject" ||
-              pending.action === "cancel") && (
+            {(pending.action === "reopen" || pending.action === "reject") && (
               <OminiInput
                 label={
                   pending.action === "reopen"
@@ -570,6 +600,26 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
           </>
         )}
       </FlowDialog>
+      {cancellation && (
+        <CancellationDialog
+          request={cancellation}
+          api={api}
+          onClose={() => {
+            setCancellation(null);
+            result.reload();
+          }}
+          onSuccess={(updated) => {
+            setCancellation(null);
+            setMessage("Solicitação cancelada.");
+            acceptedUpdate(updated);
+          }}
+          onInvalidated={(message) => {
+            setCancellation(null);
+            setError(message);
+            result.reload();
+          }}
+        />
+      )}
     </ScreenContainer>
   );
 }

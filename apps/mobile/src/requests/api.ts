@@ -1,6 +1,10 @@
 import {
   REQUEST_STATUSES,
   REQUEST_ACTIONS,
+  CANCELLATION_REASON_CODES,
+  CANCELLATION_EXECUTION_CONTEXTS,
+  CANCELLATION_TARGET_STATUS,
+  type CancelRequestInput,
   type RequestStatus,
   type RequestAction,
   type CreateRequestInput,
@@ -74,7 +78,13 @@ function event(v: unknown): v is RequestEventView {
     status(v.newStatus) &&
     integer(v.version) &&
     date(v.occurredAt) &&
-    (v.reason === null || bounded(v.reason, 500))
+    (v.reason === null || bounded(v.reason, 500)) &&
+    (v.reasonCode == null ||
+      CANCELLATION_REASON_CODES.some((code) => code === v.reasonCode)) &&
+    (v.executionContext == null ||
+      CANCELLATION_EXECUTION_CONTEXTS.some(
+        (context) => context === v.executionContext,
+      ))
   );
 }
 export function isRequestDetail(v: unknown): v is ServiceRequestDetail {
@@ -183,6 +193,15 @@ export class RequestsApi {
     return this.call(
       `/${encodeURIComponent(id)}/${action}`,
       isRequestDetail,
+      "POST",
+      input,
+    );
+  }
+  cancel(id: string, input: CancelRequestInput) {
+    return this.call(
+      `/${encodeURIComponent(id)}/cancel`,
+      (value): value is ServiceRequestDetail =>
+        isRequestDetail(value) && value.status === CANCELLATION_TARGET_STATUS,
       "POST",
       input,
     );

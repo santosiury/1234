@@ -247,7 +247,7 @@ test("completed request offers a voluntary later review, publishes selected real
     "Atendimento cuidadoso.",
   );
   await fireEvent.press(screen.getByText("Publicar avaliação"));
-  await screen.findByText("Avaliação publicada · 5 de 5");
+  await screen.findByText("Avaliação publicada · 5 ⭐");
   expect(published).toEqual([{ rating: 5, comment: "Atendimento cuidadoso." }]);
   expect(screen.queryByText("Avalie o atendimento")).toBeNull();
 });
@@ -341,7 +341,7 @@ test("real public review appears after publication and a new focus, without fict
   };
   await testRouter.back();
   await testRouter.push(`/professional/${providerId}`);
-  expect(await screen.findByText("4 de 5 · 1 avaliação recebida")).toBeTruthy();
+  expect(await screen.findByText("4 ⭐ · 1 avaliação recebida")).toBeTruthy();
   expect(screen.getByText("Serviço bem feito.")).toBeTruthy();
   expect(screen.queryByText("pessoa@example.test")).toBeNull();
 });
@@ -357,7 +357,7 @@ test("real received review is visible in professional Meu perfil and cannot be e
   };
   await login();
   await testRouter.push("/provider/profile");
-  expect(await screen.findByText("3 de 5 · 1 avaliação recebida")).toBeTruthy();
+  expect(await screen.findByText("3 ⭐ · 1 avaliação recebida")).toBeTruthy();
   expect(screen.getByText("Atendimento concluído.")).toBeTruthy();
   expect(screen.queryByText("Publicar avaliação")).toBeNull();
   expect(screen.queryByText("Excluir avaliação")).toBeNull();
