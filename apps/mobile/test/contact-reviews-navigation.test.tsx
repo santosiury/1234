@@ -19,6 +19,8 @@ import type {
   ServiceRequestDetail,
 } from "@omini/shared";
 import { allowedRequestActions } from "@omini/shared";
+const actualMarketplaceRequest = MarketplaceHttp.prototype.request;
+const originalReviewApiUrl = process.env.EXPO_PUBLIC_API_URL;
 const providerId = "30000000-0000-4000-8000-000000000001",
   requestId = "40000000-0000-4000-8000-000000000001";
 const person = {
@@ -50,6 +52,7 @@ const person = {
   ],
   isActive: true,
 };
+let protectedMode = false;
 let auth: FakeAuthApi,
   contact: OwnContact,
   status: RequestStatus,
@@ -86,13 +89,17 @@ function row(): ServiceRequestDetail {
     allowedActions: allowedRequestActions(status, viewer),
     events: [],
     eventTotal: 5,
-    canReview: viewer === "client" && status === "COMPLETED" && !review,
+    canReview:
+      (protectedMode || viewer === "client") &&
+      status === "COMPLETED" &&
+      !review,
     reviewSubmitted: !!review,
   };
 }
 beforeEach(() => {
   jest.clearAllMocks();
   auth = new FakeAuthApi();
+  protectedMode = false;
   status = "COMPLETED";
   review = null;
   published = [];
@@ -120,6 +127,20 @@ beforeEach(() => {
   jest
     .spyOn(MarketplaceHttp.prototype, "request")
     .mockImplementation(async (path, method = "GET", body) => {
+      if (path.startsWith("reputation/"))
+        return {
+          average: null,
+          total: 0,
+          page: 1,
+          pageSize: 10,
+          items: [],
+          privacyProtected: true,
+          anonymous: true,
+          distribution: ([5, 4, 3, 2, 1] as const).map((stars) => ({
+            stars,
+            count: 0,
+          })),
+        };
       if (path === "me/contact") {
         if (method === "PATCH") {
           contact = {
@@ -147,11 +168,24 @@ beforeEach(() => {
             id: "80000000-0000-4000-8000-000000000001",
             ...(body as { rating: 5; comment: string }),
             createdAt: "2026-11-15T13:00:00Z",
-            authorLabel: "Cliente Omini",
+            authorLabel:
+              row().viewer === "provider" ? "Prestador Omini" : "Cliente Omini",
+            ...(protectedMode ? { protected: true } : {}),
           };
           return review;
         }
-        return { canReview: row().canReview, review };
+        return {
+          canReview: row().canReview,
+          review,
+          ...(protectedMode
+            ? {
+                viewer: row().viewer,
+                target: row().viewer === "provider" ? "client" : "provider",
+                protected: true,
+                closesAt: "2026-12-15T12:00:00Z",
+              }
+            : {}),
+        };
       }
       if (
         path.startsWith("reviews/providers/") ||
@@ -184,7 +218,12 @@ beforeEach(() => {
       throw Error("Unknown test endpoint");
     });
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => {
+  jest.restoreAllMocks();
+  if (originalReviewApiUrl === undefined)
+    delete process.env.EXPO_PUBLIC_API_URL;
+  else process.env.EXPO_PUBLIC_API_URL = originalReviewApiUrl;
+});
 async function login() {
   await renderRouter(routes, { initialUrl: "/login" });
   await fireEvent.changeText(
@@ -388,4 +427,170 @@ test("private contact is cleared on blur and delayed responses cannot open exter
   expect(
     screen.queryByText("(48) 99876-5432", { includeHiddenElements: true }),
   ).toBeNull();
+});
+
+test("provider submits an anonymous protected review of the client and returns directly to provider request", async () => {
+  protectedMode = true;
+  auth.value.profiles = { client: false, provider: true };
+  await login();
+  await testRouter.push(`/provider/requests/${requestId}`);
+  await fireEvent.press(await screen.findByText("Avalie o atendimento"));
+  expect(
+    await screen.findByText(/Como foi a experiência com o cliente/),
+  ).toBeTruthy();
+  expect(screen.getByText(/Envie até 14 dias após a conclusão/)).toBeTruthy();
+  await fireEvent.press(screen.getByRole("radio", { name: "2 estrelas" }));
+  await fireEvent.press(screen.getByText("Publicar avaliação"));
+  expect(await screen.findByText("Avaliação recebida · 2 ⭐")).toBeTruthy();
+  expect(screen).toHavePathname(`/provider/requests/${requestId}`);
+  expect(published).toEqual([{ rating: 2, comment: null }]);
+  expect(screen.queryByText(/Sua avaliação será pública/)).toBeNull();
+});
+test("provider sees protected client reputation before acceptance without identity or sample size", async () => {
+  protectedMode = true;
+  auth.value.profiles = { client: false, provider: true };
+  status = "REQUESTED";
+  await login();
+  await testRouter.push(`/provider/requests/${requestId}`);
+  expect(await screen.findByText("Reputação do cliente")).toBeTruthy();
+  expect(screen.getByText("Reputação protegida")).toBeTruthy();
+  expect(
+    screen.queryByText(/\d+ avaliações recebidas|Cliente Omini ·/),
+  ).toBeNull();
+});
+
+test.each([
+  [
+    "client",
+    409,
+    "REVIEW_WINDOW_CLOSED",
+    "O prazo de 14 dias para avaliar este serviço terminou.",
+  ],
+  [
+    "provider",
+    409,
+    "REVIEW_WINDOW_CLOSED",
+    "O prazo de 14 dias para avaliar este serviço terminou.",
+  ],
+  [
+    "client",
+    426,
+    "REVIEW_CLIENT_UPDATE_REQUIRED",
+    "Atualize o aplicativo para enviar avaliações com a política protegida.",
+  ],
+  [
+    "provider",
+    426,
+    "REVIEW_CLIENT_UPDATE_REQUIRED",
+    "Atualize o aplicativo para enviar avaliações com a política protegida.",
+  ],
+] as const)(
+  "%s handles definitive %s %s without retry even after stale eligibility refresh",
+  async (side, statusCode, errorCode, errorMessage) => {
+    protectedMode = true;
+    auth.value.profiles =
+      side === "provider"
+        ? { client: false, provider: true }
+        : { client: true, provider: false };
+    process.env.EXPO_PUBLIC_API_URL = "http://192.0.2.10:3001/api";
+    const stub = jest.mocked(MarketplaceHttp.prototype.request),
+      fallback = stub.getMockImplementation()!;
+    stub.mockImplementation(function (
+      this: MarketplaceHttp,
+      path,
+      method = "GET",
+      body,
+      token,
+      signal,
+      extraHeaders,
+    ) {
+      if (path.startsWith("reviews/requests/") && method === "POST")
+        return actualMarketplaceRequest.call(
+          this,
+          path,
+          method,
+          body,
+          token,
+          signal,
+          extraHeaders,
+        );
+      return fallback.call(
+        this,
+        path,
+        method,
+        body,
+        token,
+        signal,
+        extraHeaders,
+      );
+    });
+    const post = jest
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue({
+        ok: false,
+        status: statusCode,
+        json: async () => ({
+          code: errorCode,
+          message: "private server detail",
+        }),
+      } as Response);
+    await login();
+    await testRouter.push(`/${side}/requests/${requestId}`);
+    await fireEvent.press(await screen.findByText("Avalie o atendimento"));
+    await fireEvent.press(screen.getByRole("radio", { name: "4 estrelas" }));
+    await fireEvent.press(screen.getByText("Publicar avaliação"));
+    expect(await screen.findByText(errorMessage)).toBeTruthy();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(
+      screen.queryByRole("button", { name: "Publicar avaliação" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Conferir e repetir publicação" }),
+    ).toBeNull();
+    expect(screen.queryByText(/A resposta não foi confirmada/)).toBeNull();
+    expect(screen.queryByText(/private server detail/)).toBeNull();
+    expect(post).toHaveBeenCalledTimes(1);
+    await fireEvent.press(screen.getByText("Voltar ao atendimento"));
+    expect(screen).toHavePathname(`/${side}/requests/${requestId}`);
+    expect(screen.queryByText("Sair sem salvar?")).toBeNull();
+    expect(post).toHaveBeenCalledTimes(1);
+  },
+);
+test("an uncertain network error still allows an identical retry without treating it as an expired window", async () => {
+  protectedMode = true;
+  const stub = jest.mocked(MarketplaceHttp.prototype.request),
+    fallback = stub.getMockImplementation()!;
+  let attempts = 0;
+  stub.mockImplementation(function (
+    this: MarketplaceHttp,
+    path,
+    method = "GET",
+    body,
+    token,
+    signal,
+    extraHeaders,
+  ) {
+    if (
+      path.startsWith("reviews/requests/") &&
+      method === "POST" &&
+      ++attempts === 1
+    )
+      return Promise.reject(
+        new AuthFailure(0, "NETWORK", "Não foi possível conectar."),
+      );
+    return fallback.call(this, path, method, body, token, signal, extraHeaders);
+  });
+  await login();
+  await testRouter.push(`/client/requests/${requestId}`);
+  await fireEvent.press(await screen.findByText("Avalie o atendimento"));
+  await fireEvent.press(screen.getByRole("radio", { name: "3 estrelas" }));
+  await fireEvent.press(screen.getByText("Publicar avaliação"));
+  await fireEvent.press(
+    await screen.findByText("Conferir e repetir publicação"),
+  );
+  expect(await screen.findByText("Avaliação recebida · 3 ⭐")).toBeTruthy();
+  expect(attempts).toBe(2);
+  expect(published).toEqual([{ rating: 3, comment: null }]);
 });

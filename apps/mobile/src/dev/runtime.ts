@@ -1,6 +1,6 @@
 // Development-only identifier for confirming the bundle opened in Expo Go.
 // This is a source revision, not proof of a physical-device test or a Git commit.
-export const MOBILE_UI_REVISION = "2.6-mobile-r2";
+export const MOBILE_UI_REVISION = "2.6-mobile-r4";
 
 /** Never echo userinfo, query strings, fragments or arbitrary URL paths. */
 export function runtimeApiLabel(value: string | undefined): string {

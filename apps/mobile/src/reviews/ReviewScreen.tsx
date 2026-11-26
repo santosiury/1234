@@ -21,7 +21,8 @@ import { isRequestId } from "../requests/api";
 import { theme } from "../theme";
 import { ReviewsApi } from "./api";
 export function ReviewScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, side } = useLocalSearchParams<{ id: string; side?: string }>();
+  const requestSide = side === "provider" ? "provider" : "client";
   const { state } = useSession();
   if (state.status === "loading") return null;
   if (!isRequestId(id)) return <Redirect href="/client/requests" />;
@@ -30,13 +31,15 @@ export function ReviewScreen() {
       <Redirect
         href={{
           pathname: "/login",
-          params: { requestId: id, requestSide: "client" },
+          params: { requestId: id, requestSide },
         }}
       />
     );
-  return <ReviewForm key={`${state.user.id}:${id}`} id={id} />;
+  return (
+    <ReviewForm key={`${state.user.id}:${id}`} id={id} side={requestSide} />
+  );
 }
-function ReviewForm({ id }: { id: string }) {
+function ReviewForm({ id, side }: { id: string; side: "client" | "provider" }) {
   const { manager, state } = useSession(),
     owner = state.user!.id;
   const { monitor } = useRequestUpdates();
@@ -47,14 +50,23 @@ function ReviewForm({ id }: { id: string }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const lock = useRef(false),
+    blocked = useRef(false),
     intent = useRef<CreateReviewInput | null>(null);
   const [uncertain, setUncertain] = useState(false);
-  const exit = useFormExit(rating > 0 || comment !== "", busy, {
-    pathname: "/client/requests/[id]",
-    params: { id },
-  });
+  const [submissionBlocked, setSubmissionBlocked] = useState(false);
+  const exit = useFormExit(
+    !submissionBlocked && (rating > 0 || comment !== ""),
+    busy,
+    {
+      pathname:
+        (result.data?.viewer ?? side) === "provider"
+          ? "/provider/requests/[id]"
+          : "/client/requests/[id]",
+      params: { id },
+    },
+  );
   async function publish() {
-    if (lock.current) return;
+    if (lock.current || blocked.current) return;
     if (
       !intent.current &&
       (!Number.isInteger(rating) ||
@@ -87,7 +99,20 @@ function ReviewForm({ id }: { id: string }) {
           ? e.message
           : "Não foi possível publicar. Tente novamente.",
       );
-      if (e instanceof AuthFailure && e.status === 400) {
+      if (
+        e instanceof AuthFailure &&
+        ["REVIEW_WINDOW_CLOSED", "REVIEW_CLIENT_UPDATE_REQUIRED"].includes(
+          e.code,
+        )
+      ) {
+        // A definitive rejection is not an uncertain submission. Keep this
+        // request closed even if a refresh briefly returns stale eligibility.
+        blocked.current = true;
+        setSubmissionBlocked(true);
+        intent.current = null;
+        setUncertain(false);
+        result.reload();
+      } else if (e instanceof AuthFailure && e.status === 400) {
         intent.current = null;
         setUncertain(false);
       } else {
@@ -105,9 +130,13 @@ function ReviewForm({ id }: { id: string }) {
     <ScreenContainer>
       <Header title="Avalie o atendimento" back onBack={exit.leave} />
       <RemoteStatus {...result} />
-      {existing ? (
+      {submissionBlocked ? null : existing ? (
         <View style={ui.card}>
-          <Text style={ui.section}>Sua avaliação já foi publicada</Text>
+          <Text style={ui.section}>
+            {existing.protected
+              ? "Sua avaliação foi recebida"
+              : "Sua avaliação já foi publicada"}
+          </Text>
           <Text style={ui.text}>{existing.rating} ⭐</Text>
           {!!existing.comment && (
             <Text style={ui.text}>{existing.comment}</Text>
@@ -119,7 +148,10 @@ function ReviewForm({ id }: { id: string }) {
       ) : result.data?.canReview ? (
         <>
           <Text style={ui.text}>
-            Como foi o atendimento? Escolha uma nota de 1 a 5 estrelas.
+            {result.data.target === "client"
+              ? "Como foi a experiência com o cliente?"
+              : "Como foi o atendimento?"}{" "}
+            Escolha uma nota de 1 a 5 estrelas.
           </Text>
           <View
             style={[ui.row, { flexWrap: "wrap" }]}
@@ -163,9 +195,9 @@ function ReviewForm({ id }: { id: string }) {
             hint="Até 1.000 caracteres. Não inclua nomes, telefone, endereço ou outros dados pessoais."
           />
           <Text style={ui.small}>
-            Sua avaliação será pública como Cliente Omini. Confira a nota e o
-            comentário: depois de publicar, você não poderá editar ou excluir
-            nesta fase.
+            {result.data.protected
+              ? "Envie até 14 dias após a conclusão. As notas são liberadas quando ambos avaliam ou ao terminar o prazo. A reputação é agregada em grupos protegidos; identidade, comentário, data e contratação não são divulgados. Seu comentário fica restrito a você e à auditoria interna. Depois de enviar, não é possível editar nesta fase."
+              : "Sua avaliação será pública como Cliente Omini. Confira a nota e o comentário: depois de publicar, você não poderá editar ou excluir nesta fase."}
           </Text>
           {!!uncertain && (
             <Text style={ui.small}>

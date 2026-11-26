@@ -1,10 +1,12 @@
-# Omini · Contato privado e avaliações reais (Fase 2.5)
+# Omini · Avaliações protegidas (Fase 2.6)
 
 Marketplace mobile de serviços para Araranguá, SC. Cliente solicita um serviço do catálogo real; prestador aceita, inicia e informa a conclusão; cliente confirma ou reabre com motivo. Sessão segura e experiências de cliente/prestador preservadas. Contato liberado somente ao prestador destinatário após aceite e avaliações reais após conclusão. Sem pagamentos ou chat interno.
 
 **Modelo de negócio: assinatura mensal de prestadores.** O Omini não cobra comissão, não administra orçamentos e não processa pagamentos dos serviços. Planos e assinaturas serão implementados em outra fase.
 
-**Atualização atual:** [Fase 2.5 — implantação segura, migrations/GRANTs e roteiro no iPhone/Samsung](docs/fase-2-5-contato-avaliacoes.md). [Resultados e arquivos modificados](docs/fase-2-5-validacao.md). Preserve as credenciais existentes; o responsável deve revisar e validar as migrations em instância isolada antes da aplicação real.
+**Entrega atual em revisão:** [Fase 2.6 — avaliações bidirecionais protegidas, anonimato e homologação isolada](docs/fase-2-6-avaliacoes-protegidas.md). [Política aprovada de 14 dias](docs/avaliacoes-bidirecionais.md). [Resultados e arquivos modificados](docs/fase-2-6-validacao.md). [Ativação segura e recuperação após auditoria](docs/fase-2-6-ativacao-segura.md). Migration aditiva apenas preparada; ativação exige autorização separada em 127.0.0.1:15433, API 3001. Nenhum SQL foi executado nesta entrega. Diagnóstico técnico saiu da conta normal.
+
+**Histórico da Fase 2.5:** [Fase 2.5 — implantação segura, migrations/GRANTs e roteiro no iPhone/Samsung](docs/fase-2-5-contato-avaliacoes.md). [Resultados e arquivos modificados](docs/fase-2-5-validacao.md). Preserve as credenciais existentes; o responsável deve revisar e validar as migrations em instância isolada antes da aplicação real.
 
 **Atualização: cobertura por cidade e UF.** O responsável informou que a migration e as permissões da Fase 2.4 já foram aplicadas. A correção atual remove bairro como cobertura/filtro e elimina a repetição de localização na contratação; não requer migration nem GRANT. Siga [compatibilidade legada, atualização no Windows e roteiro no iPhone](docs/cobertura-cidade-uf.md). O [guia original da Fase 2.4](docs/fase-2-4-solicitacoes.md) contém a arquitetura e o SQL histórico; as regras de bairro foram substituídas pelo novo guia.
 

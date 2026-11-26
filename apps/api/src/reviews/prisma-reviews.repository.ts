@@ -75,9 +75,22 @@ export class PrismaReviewsRepository extends ReviewsRepository {
         AND v.[clientUserId]<>v.[providerUserId] AND r.[status]=N'COMPLETED' AND r.[completedAt] IS NOT NULL AND v.[rating] BETWEEN 1 AND 5
         AND EXISTS (SELECT 1 FROM [dbo].[ServiceRequestEvent] e WHERE e.[requestId]=r.[id] AND e.[actorUserId]=r.[clientUserId] AND e.[action]=N'confirm-completion' AND e.[previousStatus]=N'AWAITING_CONFIRMATION' AND e.[newStatus]=N'COMPLETED' AND e.[version]=r.[version] AND e.[occurredAt]=r.[completedAt])`;
         const [summary] = await db.$queryRaw<
-          { total: number; average: Prisma.Decimal | null }[]
+          {
+            total: number;
+            average: Prisma.Decimal | null;
+            one: number;
+            two: number;
+            three: number;
+            four: number;
+            five: number;
+          }[]
         >(
-          Prisma.sql`SELECT COUNT(*) AS [total], AVG(CAST(v.[rating] AS DECIMAL(10,4))) AS [average] ${valid}`,
+          Prisma.sql`SELECT COUNT(*) AS [total], AVG(CAST(v.[rating] AS DECIMAL(10,4))) AS [average],
+          COALESCE(SUM(CASE WHEN v.[rating]=1 THEN 1 ELSE 0 END),0) AS [one],
+          COALESCE(SUM(CASE WHEN v.[rating]=2 THEN 1 ELSE 0 END),0) AS [two],
+          COALESCE(SUM(CASE WHEN v.[rating]=3 THEN 1 ELSE 0 END),0) AS [three],
+          COALESCE(SUM(CASE WHEN v.[rating]=4 THEN 1 ELSE 0 END),0) AS [four],
+          COALESCE(SUM(CASE WHEN v.[rating]=5 THEN 1 ELSE 0 END),0) AS [five] ${valid}`,
         );
         const rows = await db.$queryRaw<
           {
@@ -94,6 +107,13 @@ export class PrismaReviewsRepository extends ReviewsRepository {
           average: summary.total === 0 ? null : Number(summary.average),
           page,
           pageSize,
+          distribution: [
+            { stars: 5 as const, count: summary.five },
+            { stars: 4 as const, count: summary.four },
+            { stars: 3 as const, count: summary.three },
+            { stars: 2 as const, count: summary.two },
+            { stars: 1 as const, count: summary.one },
+          ],
           items: rows.map((row) => ({
             ...row,
             createdAt: row.createdAt.toISOString(),

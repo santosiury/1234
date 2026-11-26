@@ -36,18 +36,22 @@ export function ProviderReviews({
     ? { status: "loading" }
     : result.error
       ? { status: "error", onRetry: result.reload }
-      : d && d.total > 0 && d.average !== null
-        ? {
-            status: "ready",
-            average: d.average,
-            count: d.total,
-            received: d.items,
-          }
-        : { status: "empty" };
+      : d?.privacyProtected
+        ? { status: "protected" }
+        : d && d.total > 0 && d.average !== null
+          ? {
+              status: "ready",
+              average: d.average,
+              count: d.total,
+              distribution: d.distribution,
+              anonymous: d.anonymous,
+              received: d.items,
+            }
+          : { status: "empty" };
   return (
     <View style={ui.group}>
       <ReviewsSection audience={own ? "owner" : "public"} state={state} />
-      {d && d.total > d.pageSize && (
+      {d && !d.anonymous && d.total > d.pageSize && (
         <View style={ui.group}>
           <PrimaryButton
             secondary

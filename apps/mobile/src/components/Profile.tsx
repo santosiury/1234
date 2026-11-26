@@ -1,3 +1,4 @@
+import { ClientReputation } from "../reviews/ClientReputation";
 import { ContactEditor } from "../contact/ContactForm";
 import { useProfessionalEntry } from "../marketplace/provider/navigation";
 import { useSession } from "../auth/session";
@@ -5,9 +6,7 @@ import { AuthFailure } from "../auth/api";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { router } from "expo-router";
-import type { HealthResponse } from "@omini/shared";
 import { useMode } from "../mode";
-import { MOBILE_UI_REVISION, runtimeApiLabel } from "../dev/runtime";
 import {
   ScreenContainer,
   Header,
@@ -48,35 +47,6 @@ export function Profile({
       );
     } finally {
       setAccountBusy(false);
-    }
-  }
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const baseUrl = process.env.EXPO_PUBLIC_API_URL;
-  async function checkApi() {
-    setLoading(true);
-    setMessage("");
-    try {
-      if (!baseUrl || !/^https?:\/\//.test(baseUrl))
-        throw new Error("Configure EXPO_PUBLIC_API_URL no .env do aplicativo.");
-      const response = await fetch(`${baseUrl.replace(/\/$/, "")}/health`, {
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!response.ok) throw new Error("A API retornou um erro.");
-      const data: HealthResponse = await response.json();
-      if (data.status !== "ok" || !Number.isFinite(Date.parse(data.timestamp)))
-        throw new Error("Resposta inesperada da API.");
-      setMessage(
-        "A API respondeu ao health check. Esta consulta não valida o banco nem o cancelamento.",
-      );
-    } catch (error) {
-      setMessage(
-        error instanceof Error && error.message.startsWith("Configure")
-          ? error.message
-          : "Não foi possível conectar. Verifique o IP da rede local, o servidor e o firewall.",
-      );
-    } finally {
-      setLoading(false);
     }
   }
   return (
@@ -165,6 +135,9 @@ export function Profile({
                 ),
               )}
           </View>
+          {state.user.profiles.client && (
+            <ClientReputation key={`reputation:${state.user.id}`} />
+          )}
           <ContactEditor key={state.user.id} />
           <PrimaryButton
             secondary
@@ -220,30 +193,6 @@ export function Profile({
         onPress={() => router.replace("/")}
       />
       {catalogSource === "demo" && <DemoNotice />}
-      <View style={ui.card}>
-        <Text style={ui.section}>Conexão com a API</Text>
-        {__DEV__ && (
-          <View style={ui.group}>
-            <Text style={ui.small}>Revisão mobile: {MOBILE_UI_REVISION}</Text>
-            <Text style={ui.small}>API do app: {runtimeApiLabel(baseUrl)}</Text>
-          </View>
-        )}
-        <Text style={ui.text}>
-          Este diagnóstico consulta apenas o health check. Não envia dados
-          pessoais.
-        </Text>
-        <PrimaryButton
-          secondary
-          title="Testar conexão"
-          loading={loading}
-          onPress={checkApi}
-        />
-        {!!message && (
-          <Text accessibilityLiveRegion="polite" style={ui.text}>
-            {message}
-          </Text>
-        )}
-      </View>
     </ScreenContainer>
   );
 }

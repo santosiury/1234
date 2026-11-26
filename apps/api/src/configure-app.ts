@@ -12,10 +12,10 @@ export function configureApp(app: INestApplication) {
   const spec = new DocumentBuilder()
     .setTitle("Omini API")
     .setDescription(
-      "Omini · authentication, real catalog and participant-authorized service requests, private contact sharing and real completed-service reviews. Development-only database diagnostics are excluded from the public specification.",
+      "Omini · autenticação, catálogo e solicitações reais. Fase 2.6: avaliações bidirecionais protegidas por 14 dias, reputação anônima por coortes completas e consulta do cliente somente por prestadores autorizados. Contratos protegidos exigem REVIEWS_V2_ENABLED; corte de versão apenas em testes autorizados. Diagnósticos internos não integram esta especificação.",
     )
     .addBearerAuth()
-    .setVersion("0.2.5")
+    .setVersion("0.2.6")
     .build();
   SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, spec));
 }

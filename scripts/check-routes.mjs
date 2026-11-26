@@ -23,6 +23,7 @@ const routes = [
   "service-request/new",
   "service-review/[id]",
   "service-request/resume",
+  "internal/diagnostics",
   "provider/account",
   "provider/services/_layout",
   "provider/services/index",

@@ -1,3 +1,4 @@
+import { validateProtectedReviewsMigration } from "./protected-reviews-migration-validation";
 import { readFile } from "node:fs/promises";
 import { validateCancellationMigration } from "./cancellation-migration-validation";
 import { validateInitialMigration } from "./migration-validation";
@@ -43,7 +44,10 @@ async function main() {
   );
   await validateCancellationMigration(
     previous,
-    current,
+    await readFile(
+      "prisma/history/phase26-cancellation.prisma.snapshot",
+      "utf8",
+    ),
     await readFile(
       "prisma/migrations/20261112000000_service_requests/migration.sql",
       "utf8",
@@ -52,6 +56,20 @@ async function main() {
       "prisma/migrations/20261123000000_unilateral_cancellation/migration.sql",
       "utf8",
     ),
+  );
+  await validateProtectedReviewsMigration(
+    await readFile(
+      "prisma/history/phase26-cancellation.prisma.snapshot",
+      "utf8",
+    ),
+    current,
+    await readFile(
+      "prisma/migrations/20261124000000_bidirectional_reviews/migration.sql",
+      "utf8",
+    ),
+  );
+  console.log(
+    "Protected review migration contract passed; SQL was NOT executed.",
   );
   console.log(
     "Unilateral cancellation migration contract passed; no SQL was executed.",

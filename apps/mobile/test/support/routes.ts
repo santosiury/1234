@@ -36,6 +36,7 @@ import ReceivedDetail from "../../app/provider/requests/[id]";
 import ReviewScreen from "../../app/service-review/[id]";
 import NewRequest from "../../app/service-request/new";
 import ResumeRequest from "../../app/service-request/resume";
+import Diagnostics from "../../app/internal/diagnostics";
 export const routes = {
   _layout: Root,
   index: Welcome,
@@ -55,6 +56,7 @@ export const routes = {
   "service-review/[id]": ReviewScreen,
   "service-request/new": NewRequest,
   "service-request/resume": ResumeRequest,
+  "internal/diagnostics": Diagnostics,
   "provider/account": ProfessionalAccount,
   "provider/services/_layout": ServicesLayout,
   "provider/services/index": Services,

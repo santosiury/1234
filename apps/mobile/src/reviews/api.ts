@@ -4,6 +4,12 @@ import type {
   RequestReview,
   ReviewsPage,
 } from "@omini/shared";
+import {
+  isReviewDistribution,
+  REPUTATION_MIN_DISTINCT_AUTHORS,
+  PROTECTED_REVIEW_POLICY_HEADER,
+  PROTECTED_REVIEW_POLICY,
+} from "@omini/shared";
 import { MarketplaceHttp } from "../marketplace/api";
 import { AuthFailure } from "../auth/api";
 import type { SessionManager } from "../auth/session-manager";
@@ -18,7 +24,9 @@ function review(v: unknown): v is PublishedReview {
     (r.comment === null ||
       (typeof r.comment === "string" && r.comment.length <= 1000)) &&
     Number.isFinite(Date.parse(r.createdAt)) &&
-    r.authorLabel === "Cliente Omini"
+    (r.authorLabel === "Cliente Omini" ||
+      r.authorLabel === "Prestador Omini") &&
+    (r.protected === undefined || typeof r.protected === "boolean")
   );
 }
 function parse<T>(v: unknown, valid: (v: unknown) => v is T): T {
@@ -36,6 +44,8 @@ export function reviewsPage(v: unknown): v is ReviewsPage {
   return (
     Number.isSafeInteger(r.total) &&
     r.total >= 0 &&
+    (r.distribution === undefined ||
+      isReviewDistribution(r.distribution, r.total)) &&
     (r.total === 0
       ? r.average === null
       : typeof r.average === "number" && r.average >= 1 && r.average <= 5) &&
@@ -46,7 +56,19 @@ export function reviewsPage(v: unknown): v is ReviewsPage {
     r.pageSize <= 20 &&
     Array.isArray(r.items) &&
     r.items.length <= r.pageSize &&
-    r.items.every(review)
+    r.items.every(review) &&
+    (r.anonymous === undefined || typeof r.anonymous === "boolean") &&
+    (r.privacyProtected === undefined ||
+      typeof r.privacyProtected === "boolean") &&
+    (!r.anonymous || (r.items.length === 0 && r.distribution !== undefined)) &&
+    (!r.anonymous ||
+      r.privacyProtected === true ||
+      r.total >= REPUTATION_MIN_DISTINCT_AUTHORS) &&
+    (!r.privacyProtected ||
+      (r.anonymous === true &&
+        r.total === 0 &&
+        r.average === null &&
+        r.items.length === 0))
   );
 }
 export class ReviewsApi {
@@ -77,6 +99,18 @@ export class ReviewsApi {
         )
       : parse(await this.http.request(path), reviewsPage);
   }
+  clientReputation(requestId?: string) {
+    const path = requestId
+      ? `reputation/requests/${encodeURIComponent(requestId)}/client`
+      : "reputation/me/client";
+    return this.authorized(async (token) =>
+      parse(
+        await this.http.request(path, "GET", undefined, token),
+        (value): value is ReviewsPage =>
+          reviewsPage(value) && value.anonymous === true,
+      ),
+    );
+  }
   request(id: string) {
     return this.authorized(async (token) =>
       parse(
@@ -92,7 +126,17 @@ export class ReviewsApi {
             !!r &&
             typeof r.canReview === "boolean" &&
             (r.review === null || review(r.review)) &&
-            !(r.canReview && r.review)
+            !(r.canReview && r.review) &&
+            (r.viewer === undefined ||
+              r.viewer === "client" ||
+              r.viewer === "provider") &&
+            (r.target === undefined ||
+              r.target === "client" ||
+              r.target === "provider") &&
+            (r.protected === undefined || typeof r.protected === "boolean") &&
+            (r.closesAt === undefined ||
+              r.closesAt === null ||
+              Number.isFinite(Date.parse(r.closesAt)))
           );
         },
       ),
@@ -106,6 +150,8 @@ export class ReviewsApi {
           "POST",
           input,
           token,
+          undefined,
+          { [PROTECTED_REVIEW_POLICY_HEADER]: PROTECTED_REVIEW_POLICY },
         ),
         review,
       ),

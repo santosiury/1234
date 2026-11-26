@@ -99,7 +99,17 @@ test("SQL Server reputation binds IDs/pagination, casts AVG to decimal and uses 
       $queryRaw: async (query: { strings: string[]; values: unknown[] }) => {
         calls.push({ sql: query.strings.join("?"), values: query.values });
         return calls.length === 1
-          ? [{ total: 2, average: "4.5000" }]
+          ? [
+              {
+                total: 2,
+                average: "4.5000",
+                one: 0,
+                two: 0,
+                three: 0,
+                four: 1,
+                five: 1,
+              },
+            ]
           : [
               {
                 id: "review",
@@ -114,6 +124,15 @@ test("SQL Server reputation binds IDs/pagination, casts AVG to decimal and uses 
   const page = await repo.page("id", null, 2, 5);
   assert.equal(page?.average, 4.5);
   assert.equal(page?.total, 2);
+  assert.deepEqual(page?.distribution, [
+    { stars: 5, count: 1 },
+    { stars: 4, count: 1 },
+    { stars: 3, count: 0 },
+    { stars: 2, count: 0 },
+    { stars: 1, count: 0 },
+  ]);
+  for (let rating = 1; rating <= 5; rating++)
+    assert.ok(calls[0].sql.includes(`CASE WHEN v.[rating]=${rating}`));
   assert.equal(calls.length, 2);
   for (const c of calls) {
     assert.ok(!c.sql.includes("provider' OR 1=1"));

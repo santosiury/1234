@@ -53,6 +53,11 @@ async function actor(tx: RequestsTx, id: string) {
 }
 function summary(row: RequestRow, user: RequestActor): ServiceRequestSummary {
   const viewer = side(row, user.id);
+  const ownReview = row.protectedReviews
+    ? row.protectedReviews.authors.some(
+        (id) => id.toLowerCase() === user.id.toLowerCase(),
+      )
+    : !!row.review;
   return {
     id: row.id,
     providerId: row.providerId,
@@ -75,11 +80,14 @@ function summary(row: RequestRow, user: RequestActor): ServiceRequestSummary {
     version: row.version,
     viewer,
     canReview:
-      viewer === "client" &&
-      user.client &&
+      (row.protectedReviews
+        ? user[viewer] &&
+          !!row.protectedReviews.closesAt &&
+          Date.now() < row.protectedReviews.closesAt.getTime()
+        : viewer === "client" && user.client) &&
       row.reviewEligible === true &&
-      !row.review,
-    reviewSubmitted: !!row.review,
+      !ownReview,
+    reviewSubmitted: ownReview,
     allowedActions: user[viewer]
       ? allowedRequestActions(row.status as RequestStatus, viewer)
       : [],

@@ -1,3 +1,9 @@
+import {
+  PROTECTED_REVIEW_POLICY,
+  PROTECTED_REVIEW_POLICY_HEADER,
+} from "@omini/shared";
+import { MemoryProtectedReviewsRepository } from "./memory-protected-reviews.repository";
+import { ProtectedReviewsRepository } from "../../src/reviews/protected-reviews.repository";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
 import { Test } from "@nestjs/testing";
@@ -24,12 +30,17 @@ import {
   MemoryContactRepository,
   MemoryReviewsRepository,
 } from "./memory-contact-reviews.repository";
-export async function fixture(rate = false) {
+export async function fixture(rate = false, reviewsV2 = false) {
   const auth = new MemoryAuthRepository(),
     catalog = new MemoryMarketplaceRepository(auth),
     repo = new MemoryRequestsRepository(auth, catalog);
   const contacts = new MemoryContactRepository(auth, repo),
     reviews = new MemoryReviewsRepository(repo, auth, catalog);
+  const protectedReviews = new MemoryProtectedReviewsRepository(
+    repo,
+    auth,
+    catalog,
+  );
   let builder = Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(AuthRepository)
     .useValue(auth)
@@ -41,10 +52,13 @@ export async function fixture(rate = false) {
     .useValue(contacts)
     .overrideProvider(ReviewsRepository)
     .useValue(reviews)
+    .overrideProvider(ProtectedReviewsRepository)
+    .useValue(protectedReviews)
     .overrideProvider(ConfigService)
     .useValue(
       new ConfigService({
         AUTH_ENABLED: true,
+        REVIEWS_V2_ENABLED: reviewsV2,
         PERSISTENCE_ENABLED: false,
         NODE_ENV: "test",
         JWT_ACCESS_SECRET: randomBytes(64).toString("base64"),
@@ -65,11 +79,18 @@ export async function fixture(rate = false) {
     method = "GET",
     body?: unknown,
     tokens?: AuthTokens,
+    extraHeaders?: Record<string, string>,
   ) =>
     fetch(base + "/api/" + path, {
       method,
       headers: {
         "Content-Type": "application/json",
+        ...(reviewsV2 &&
+        method === "POST" &&
+        path.startsWith("reviews/requests/")
+          ? { [PROTECTED_REVIEW_POLICY_HEADER]: PROTECTED_REVIEW_POLICY }
+          : {}),
+        ...extraHeaders,
         ...(tokens ? { Authorization: `Bearer ${tokens.accessToken}` } : {}),
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -143,6 +164,7 @@ export async function fixture(rate = false) {
   }
   return {
     app,
+    protectedReviews,
     contacts,
     reviews,
     auth,

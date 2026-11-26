@@ -14,6 +14,10 @@ const files = [
   "apps/mobile/src/requests/api.ts",
   "apps/mobile/src/dev/runtime.ts",
   "apps/mobile/src/components/Profile.tsx",
+  "apps/mobile/src/dev/DiagnosticsScreen.tsx",
+  "apps/mobile/src/components/ReputationSummary.tsx",
+  "apps/mobile/src/reviews/ClientReputation.tsx",
+  "apps/mobile/src/reviews/api.ts",
 ];
 const source = (path) => readFileSync(new URL(path, root), "utf8");
 try {
@@ -42,7 +46,9 @@ try {
   assert.match(source(files[4]), /<CancellationDialog\b/);
   assert.match(source(files[5]), /api\.cancel\(request\.id, intent\.current\)/);
   for (const path of files.slice(0, 3)) {
-    assert.ok(source(path).includes("⭐"));
+    assert.ok(
+      source(path).includes("⭐") || source(path).includes("ReputationSummary"),
+    );
     assert.doesNotMatch(source(path), /\bde 5\b/);
   }
   assert.doesNotMatch(
@@ -53,7 +59,15 @@ try {
     /MOBILE_UI_REVISION = "([a-zA-Z0-9.-]+)"/,
   )?.[1];
   assert.ok(revision);
-  assert.match(source(files[8]), /MOBILE_UI_REVISION/);
+  assert.doesNotMatch(
+    source(files[8]),
+    /MOBILE_UI_REVISION|Conexão com a API|Testar conexão|EXPO_PUBLIC_API_URL/,
+  );
+  assert.match(source(files[9]), /MOBILE_UI_REVISION/);
+  assert.match(
+    source("apps/mobile/app/internal/diagnostics.tsx"),
+    /DiagnosticsScreen/,
+  );
   const fingerprint = createHash("sha256");
   for (const path of files)
     fingerprint
@@ -75,7 +89,7 @@ try {
     "Active routes point to the updated reviews and cancellation components.",
   );
   console.log(
-    "Check Revisão mobile under Minha conta > Conexão com a API in Expo Go.",
+    "Check Revisão mobile only at the internal development route /internal/diagnostics.",
   );
   console.log(
     "Offline source validation only; this does not verify the bundle running on the iPhone.",

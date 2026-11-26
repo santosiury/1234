@@ -14,6 +14,7 @@ on:
         feature/fase-2-3-ux-prestador,
         feature/fase-2-4-solicitacoes,
         feature/fase-2-5-contato-avaliacoes,
+        feature/fase-2-6,
       ]
 permissions:
   contents: read

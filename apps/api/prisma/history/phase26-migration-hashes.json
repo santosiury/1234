@@ -1,0 +1,8 @@
+{
+  "prisma/migrations/20261109000000_persistence_foundation/migration.sql": "e2244f55428f92df8d69e2d841b45cb8bb8ef49d9870bd551267c51dc5ccd2ff",
+  "prisma/migrations/20261110000000_authentication/migration.sql": "7db13e7699322623a25336fe704fb39c55952c2f5d1006ad0fcb8bb48a634154",
+  "prisma/migrations/20261112000000_service_requests/migration.sql": "ebc635b8951712d1d61ea72b1a93c98db7eed24c6410fbd836ef4306e4eb368e",
+  "prisma/migrations/20261115000000_customer_contact/migration.sql": "2935b56756ab38f1526ee0c520db4c3a11e953a1dd89308417e2c3a988612a60",
+  "prisma/migrations/20261115010000_service_reviews/migration.sql": "4f8ce0a96bbbd530f852b2771cc48fc5d7d56b13b82d6f68abd956ac6cec6782",
+  "prisma/migrations/20261123000000_unilateral_cancellation/migration.sql": "b7f572399ca8f4724c870b43eb2cef78e24ce7b4d7449e4195ee7a9a0cc8789c"
+}

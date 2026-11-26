@@ -24,6 +24,10 @@ const messages: Record<string, string> = {
   REVIEWS_UNAVAILABLE:
     "Avaliações temporariamente indisponíveis. Tente novamente.",
   REVIEW_IMMUTABLE: "Esta avaliação já foi publicada e não pode ser alterada.",
+  REVIEW_CLIENT_UPDATE_REQUIRED:
+    "Atualize o aplicativo para enviar avaliações com a política protegida.",
+  REVIEW_WINDOW_CLOSED:
+    "O prazo de 14 dias para avaliar este serviço terminou.",
   REVIEW_NOT_ALLOWED:
     "Só é possível avaliar seu próprio atendimento concluído.",
   CLIENT_REQUIRED: "Ative seu perfil cliente para solicitar um serviço.",
@@ -131,6 +135,7 @@ export class MarketplaceHttp {
     body?: unknown,
     access?: string,
     signal?: AbortSignal,
+    extraHeaders?: Readonly<Record<string, string>>,
   ): Promise<unknown> {
     const base = this.baseUrl();
     let address: URL;
@@ -166,6 +171,7 @@ export class MarketplaceHttp {
         response = await fetch(`${base!.replace(/\/$/, "")}/${path}`, {
           method,
           headers: {
+            ...extraHeaders,
             "Content-Type": "application/json",
             ...(access ? { Authorization: `Bearer ${access}` } : {}),
           },

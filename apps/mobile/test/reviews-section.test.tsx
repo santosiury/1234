@@ -124,3 +124,82 @@ test("a backend average of 3.5 and a total beyond the current comment page are p
   expect(screen.getByText("Cliente Omini · 4 ⭐")).toBeTruthy();
   expect(screen.getByText("Comentário preservado.")).toBeTruthy();
 });
+
+test("protected reputation never reveals whether a small sample is empty or contains reviews", async () => {
+  await render(
+    <ReviewsSection
+      title="Reputação do cliente"
+      state={{ status: "protected" }}
+    />,
+  );
+  expect(screen.getByText("Reputação protegida")).toBeTruthy();
+  expect(screen.queryByText("Ainda não há avaliações.")).toBeNull();
+  expect(
+    screen.queryByText(/⭐|\d+ avaliações recebidas|Cliente Omini/),
+  ).toBeNull();
+});
+test("anonymous aggregates render the backend distribution and suppress individual metadata even if supplied", async () => {
+  await render(
+    <ReviewsSection
+      state={{
+        status: "ready",
+        average: 3.8,
+        count: 5,
+        anonymous: true,
+        distribution: [
+          { stars: 5, count: 2 },
+          { stars: 4, count: 1 },
+          { stars: 3, count: 1 },
+          { stars: 2, count: 1 },
+          { stars: 1, count: 0 },
+        ],
+        received: [
+          {
+            id: "private",
+            authorLabel: "Nome privado",
+            rating: 1,
+            comment: "Não divulgar",
+            createdAt: "2026-12-01T12:00:00Z",
+          },
+        ],
+      }}
+    />,
+  );
+  expect(screen.getByText("3,8 ⭐ · 5 avaliações recebidas")).toBeTruthy();
+  expect(screen.getAllByRole("progressbar")).toHaveLength(5);
+  expect(
+    screen.getByRole("progressbar", { name: "5 estrelas" }),
+  ).toHaveAccessibilityValue({
+    min: 0,
+    max: 5,
+    now: 2,
+    text: "2 avaliações de 5",
+  });
+  expect(screen.queryByText(/Nome privado|Não divulgar/)).toBeNull();
+});
+test("reputation texts allow system font scaling and wrap, while bars keep accessible exact counts", async () => {
+  await render(
+    <ReviewsSection
+      state={{
+        status: "ready",
+        average: 4.5,
+        count: 10000,
+        anonymous: true,
+        received: [],
+        distribution: [
+          { stars: 5, count: 5000 },
+          { stars: 4, count: 5000 },
+          { stars: 3, count: 0 },
+          { stars: 2, count: 0 },
+          { stars: 1, count: 0 },
+        ],
+      }}
+    />,
+  );
+  const text = screen.getByText("4,5 ⭐ · 10000 avaliações recebidas");
+  expect(text.props.numberOfLines).toBeUndefined();
+  expect(text.props.allowFontScaling).not.toBe(false);
+  expect(
+    screen.getByRole("progressbar", { name: "4 estrelas" }),
+  ).toHaveAccessibilityValue({ now: 5000, max: 10000 });
+});

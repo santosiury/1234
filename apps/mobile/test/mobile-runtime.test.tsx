@@ -21,10 +21,10 @@ test.each([
   ["not-a-url", "Configuração inválida"],
   ["http://localhost:3000/api", "Loopback do dispositivo"],
   ["http://127.0.0.1:3000/api", "Loopback do dispositivo"],
-  ["http://192.0.2.10:3000/wrong-path", "deve terminar em /api"],
-  ["http://user:fixture-secret@192.0.2.10:3000/api", "Configuração inválida"],
-  ["http://192.0.2.10:3000/api?token=fixture-secret", "Configuração inválida"],
-  ["http://192.0.2.10:3000/api#fixture-secret", "Configuração inválida"],
+  ["http://192.0.2.10:3001/wrong-path", "deve terminar em /api"],
+  ["http://user:fixture-secret@192.0.2.10:3001/api", "Configuração inválida"],
+  ["http://192.0.2.10:3001/api?token=fixture-secret", "Configuração inválida"],
+  ["http://192.0.2.10:3001/api#fixture-secret", "Configuração inválida"],
   ["file:///fixture-secret", "Configuração inválida"],
 ] as const)(
   "runtime diagnostic handles %s without disclosing secrets",
@@ -36,16 +36,16 @@ test.each([
 );
 
 test("valid API target is displayed without credentials and with a normalized suffix", () => {
-  expect(runtimeApiLabel("http://192.0.2.10:3000/api/")).toBe(
-    "http://192.0.2.10:3000/api",
+  expect(runtimeApiLabel("http://192.0.2.10:3001/api/")).toBe(
+    "http://192.0.2.10:3001/api",
   );
   expect(runtimeApiLabel("https://api.example.test/api")).toBe(
     "https://api.example.test/api",
   );
 });
 
-test("the real account route identifies the running development bundle and health does not claim cancellation success", async () => {
-  process.env.EXPO_PUBLIC_API_URL = "http://192.0.2.10:3000/api";
+test("account hides diagnostics even in development; internal diagnostics alone exposes revision and health", async () => {
+  process.env.EXPO_PUBLIC_API_URL = "http://192.0.2.10:3001/api";
   const auth = new FakeAuthApi();
   for (const method of ["login", "refresh", "me"] as const)
     jest
@@ -65,10 +65,15 @@ test("the real account route identifies the running development bundle and healt
   await screen.findByText("De que você precisa hoje?");
   await testRouter.push("/account");
   expect(
+    screen.queryByText(`Revisão mobile: ${MOBILE_UI_REVISION}`),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Testar conexão" })).toBeNull();
+  await testRouter.push("/internal/diagnostics");
+  expect(
     await screen.findByText(`Revisão mobile: ${MOBILE_UI_REVISION}`),
   ).toBeTruthy();
   expect(
-    screen.getByText("API do app: http://192.0.2.10:3000/api"),
+    screen.getByText("API do app: http://192.0.2.10:3001/api"),
   ).toBeTruthy();
   await fireEvent.press(screen.getByRole("button", { name: "Testar conexão" }));
   expect(
@@ -77,7 +82,23 @@ test("the real account route identifies the running development bundle and healt
     ),
   ).toBeTruthy();
   expect(health).toHaveBeenCalledWith(
-    "http://192.0.2.10:3000/api/health",
+    "http://192.0.2.10:3001/api/health",
     expect.any(Object),
   );
+});
+
+test("internal diagnostics redirects in production before any health request", async () => {
+  const previous = __DEV__;
+  const health = jest
+    .spyOn(globalThis, "fetch")
+    .mockRejectedValue(Error("must not run"));
+  try {
+    Reflect.set(globalThis, "__DEV__", false);
+    await renderRouter(routes, { initialUrl: "/internal/diagnostics" });
+    await screen.findByText("Entrar na minha conta");
+    expect(screen.queryByText("Conexão com a API")).toBeNull();
+    expect(health).not.toHaveBeenCalled();
+  } finally {
+    Reflect.set(globalThis, "__DEV__", previous);
+  }
 });

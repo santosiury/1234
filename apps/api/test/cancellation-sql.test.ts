@@ -12,7 +12,7 @@ const sqlPath =
 async function files() {
   return Promise.all([
     readFile("prisma/history/phase25.prisma.snapshot", "utf8"),
-    readFile("prisma/schema.prisma", "utf8"),
+    readFile("prisma/history/phase26-cancellation.prisma.snapshot", "utf8"),
     readFile(
       "prisma/migrations/20261112000000_service_requests/migration.sql",
       "utf8",

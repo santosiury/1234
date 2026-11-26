@@ -287,10 +287,16 @@ export interface PublishedReview {
   comment: string | null;
   createdAt: string;
   authorLabel: string;
+  /** True for an own protected receipt, never a public individual review. */
+  protected?: boolean;
 }
 export interface RequestReview {
   canReview: boolean;
   review: PublishedReview | null;
+  viewer?: RequestParticipant;
+  target?: RequestParticipant;
+  closesAt?: string | null;
+  protected?: boolean;
 }
 export interface ReviewsPage {
   average: number | null;
@@ -298,4 +304,11 @@ export interface ReviewsPage {
   page: number;
   pageSize: number;
   items: PublishedReview[];
+  /** Optional for rolling compatibility; new API responses supply all five levels. */
+  distribution?: import("./reputation").ReviewDistribution;
+  privacyProtected?: boolean;
+  /** Only aggregate reputation is disclosed; individual metadata/comments are withheld. */
+  anonymous?: boolean;
 }
+
+export * from "./reputation";

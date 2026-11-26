@@ -8,6 +8,7 @@ import type { ParsedRequestQuery } from "./validation";
 export type RequestRow = ServiceRequest & {
   review?: { id: string } | null;
   reviewEligible?: boolean;
+  protectedReviews?: { closesAt: Date | null; authors: string[] };
 };
 export type EventRow = ServiceRequestEvent;
 export interface RequestActor {

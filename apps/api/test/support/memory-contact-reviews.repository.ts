@@ -155,6 +155,10 @@ export class MemoryReviewsRepository extends ReviewsRepository {
         : null,
       page,
       pageSize,
+      distribution: ([5, 4, 3, 2, 1] as const).map((stars) => ({
+        stars,
+        count: rows.filter((r) => r.rating === stars).length,
+      })),
       items: rows.slice((page - 1) * pageSize, page * pageSize).map(published),
     };
   }

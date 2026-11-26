@@ -1,3 +1,4 @@
+import { ClientReputation } from "../reviews/ClientReputation";
 import { RequestReviewPanel } from "../reviews/RequestReviewPanel";
 import { CancellationDialog } from "./CancellationDialog";
 import { useMonitorRefresh } from "./useMonitorRefresh";
@@ -473,6 +474,10 @@ function RequestDetail({ id, side }: { id: string; side: RequestParticipant }) {
           {row.status === "COMPLETED" && (
             <RequestReviewPanel id={row.id} version={row.version} />
           )}
+          {row.viewer === "provider" &&
+            !["COMPLETED", "CANCELLED", "REJECTED"].includes(row.status) && (
+              <ClientReputation requestId={row.id} />
+            )}
           {row.viewer === "provider" && (
             <RequestContactPanel id={row.id} status={row.status} />
           )}

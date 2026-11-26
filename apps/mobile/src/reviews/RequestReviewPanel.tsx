@@ -29,7 +29,10 @@ export function RequestReviewPanel({
       <RemoteStatus {...result} />
       {r ? (
         <>
-          <Text style={ui.text}>Avaliação publicada · {r.rating} ⭐</Text>
+          <Text style={ui.text}>
+            {r.protected ? "Avaliação recebida" : "Avaliação publicada"} ·{" "}
+            {r.rating} ⭐
+          </Text>
           <Text style={ui.small}>
             {new Date(r.createdAt).toLocaleDateString("pt-BR")}
           </Text>
@@ -38,24 +41,32 @@ export function RequestReviewPanel({
       ) : result.data?.canReview ? (
         <>
           <Text style={ui.text}>
-            Como foi o atendimento? Sua avaliação é opcional e ajuda outras
-            pessoas a escolher.
+            {result.data.target === "client"
+              ? "Como foi a experiência com o cliente?"
+              : "Como foi o atendimento?"}{" "}
+            Sua avaliação é opcional.
           </Text>
           <PrimaryButton
             title="Avalie o atendimento"
             onPress={() =>
-              router.push({ pathname: "/service-review/[id]", params: { id } })
+              router.push({
+                pathname: "/service-review/[id]",
+                params: { id, side: result.data?.viewer ?? "client" },
+              })
             }
           />
           <Text style={ui.small}>
-            Você também pode avaliar mais tarde pelo histórico desta
-            solicitação.
+            {result.data.protected
+              ? "Envie até 14 dias após a conclusão. As notas são liberadas quando ambos avaliam ou no fim do prazo, com divulgação agregada para proteger o anonimato. Comentários ficam restritos ao autor e à auditoria interna."
+              : "Você também pode avaliar mais tarde pelo histórico desta solicitação."}
           </Text>
         </>
       ) : (
         result.data && (
           <Text style={ui.small}>
-            Ainda não há avaliação publicada para este atendimento.
+            {result.data.protected || result.data.closesAt === null
+              ? "O envio de avaliação não está disponível. O prazo pode ter terminado ou a contratação ser anterior à nova política."
+              : "Ainda não há avaliação publicada para este atendimento."}
           </Text>
         )
       )}

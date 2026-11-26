@@ -1,3 +1,4 @@
+import { parseSqlServerUrl } from "./persistence/sqlserver-url";
 export function validateEnvironment(env: Record<string, unknown>) {
   const port = Number(env.PORT ?? 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535)
@@ -33,6 +34,7 @@ export function validateEnvironment(env: Record<string, unknown>) {
   if (!["development", "test", "production"].includes(nodeEnv))
     throw new Error("Invalid NODE_ENV");
   const auth = flag("AUTH_ENABLED");
+  const reviewsV2 = flag("REVIEWS_V2_ENABLED");
   if (
     auth &&
     (!persistence ||
@@ -42,9 +44,33 @@ export function validateEnvironment(env: Record<string, unknown>) {
     throw new Error(
       "AUTH_ENABLED requires persistence and JWT_ACCESS_SECRET with at least 48 bytes",
     );
+  if (reviewsV2) {
+    let target: ReturnType<typeof parseSqlServerUrl>;
+    try {
+      target = parseSqlServerUrl(String(env.DATABASE_URL ?? ""));
+    } catch {
+      throw new Error(
+        "Protected reviews require the isolated test configuration.",
+      );
+    }
+    if (
+      !auth ||
+      !persistence ||
+      nodeEnv === "production" ||
+      port !== 3001 ||
+      target.server !== "127.0.0.1" ||
+      target.port !== 15433 ||
+      target.database !== "OminiDB" ||
+      target.user !== "omini_app"
+    )
+      throw new Error(
+        "Protected reviews are restricted to the isolated test API and database.",
+      );
+  }
   return {
     ...env,
     AUTH_ENABLED: auth,
+    REVIEWS_V2_ENABLED: reviewsV2,
     PORT: port,
     CORS_ORIGINS: origins,
     NODE_ENV: nodeEnv,

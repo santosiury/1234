@@ -1,4 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ProtectedReviewsService } from "./protected-reviews.service";
 import type { PublishedReview } from "@omini/shared";
 import { ApiError } from "../api-error";
 import {
@@ -39,6 +40,9 @@ function eligible(row: ReviewRequest, id: string, clientActive: boolean) {
 export class ReviewsService {
   constructor(
     @Inject(ReviewsRepository) private readonly repository: ReviewsRepository,
+    @Optional()
+    @Inject(ProtectedReviewsService)
+    private readonly protectedReviews?: ProtectedReviewsService,
   ) {}
   private async run<T>(operation: () => Promise<T>): Promise<T> {
     for (let attempt = 0; ; attempt++) {
@@ -72,6 +76,8 @@ export class ReviewsService {
     return row;
   }
   request(id: string, requestId: string) {
+    if (this.protectedReviews?.enabled)
+      return this.protectedReviews.request(id, requestId);
     return this.run(() =>
       this.repository.transaction(async (tx) => {
         const row = await this.participant(tx, id, requestId),
@@ -88,6 +94,8 @@ export class ReviewsService {
     requestId: string,
     input: z.infer<typeof createReviewSchema>,
   ) {
+    if (this.protectedReviews?.enabled)
+      return this.protectedReviews.create(id, requestId, input);
     return this.run(() =>
       this.repository.transaction(async (tx) => {
         const row = await this.participant(tx, id, requestId);
@@ -124,6 +132,13 @@ export class ReviewsService {
     page: number,
     pageSize: number,
   ) {
+    if (this.protectedReviews?.enabled)
+      return this.protectedReviews.providerPage(
+        providerId,
+        ownerId,
+        page,
+        pageSize,
+      );
     return this.run(async () => {
       const result = await this.repository.page(
         providerId,

@@ -7,6 +7,7 @@ const env: NodeJS.ProcessEnv = {
   AUTH_ENABLED: "false",
   PERSISTENCE_ENABLED: "false",
   DB_DIAGNOSTICS_ENABLED: "false",
+  REVIEWS_V2_ENABLED: "false",
 };
 delete env.JWT_ACCESS_SECRET;
 delete env.DATABASE_URL;

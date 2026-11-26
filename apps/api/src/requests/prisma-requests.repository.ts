@@ -1,5 +1,7 @@
+import { ConfigService } from "@nestjs/config";
+import { REVIEW_WINDOW_DAYS } from "@omini/shared";
 import { contactReady } from "@omini/shared";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Prisma, type ServiceRequest } from "@prisma/client";
 import { PrismaService } from "../persistence/prisma.service";
 import { RequestsRepository, type RequestsTx } from "./requests.repository";
@@ -21,14 +23,24 @@ function project(
   row:
     | (ServiceRequest & {
         review: { id: string } | null;
+        reviewWindow?: { closesAt: Date } | null;
+        participantReviews?: { authorUserId: string }[];
         events: { actorUserId: string; version: number; occurredAt: Date }[];
       })
     | null,
 ) {
   if (!row) return null;
-  const { events, ...rest } = row;
+  const { events, reviewWindow, participantReviews, ...rest } = row;
   return {
     ...rest,
+    ...(participantReviews
+      ? {
+          protectedReviews: {
+            closesAt: reviewWindow?.closesAt ?? null,
+            authors: participantReviews.map((r) => r.authorUserId),
+          },
+        }
+      : {}),
     reviewEligible:
       row.status === "COMPLETED" &&
       !!row.completedAt &&
@@ -42,10 +54,24 @@ function project(
 }
 @Injectable()
 export class PrismaRequestsRepository extends RequestsRepository {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(ConfigService) private readonly config?: ConfigService,
+  ) {
     super();
   }
   transaction<T>(run: (tx: RequestsTx) => Promise<T>): Promise<T> {
+    const protectedReviews =
+      this.config?.get<boolean>("REVIEWS_V2_ENABLED") === true;
+    const selection = {
+      ...include,
+      ...(protectedReviews
+        ? {
+            reviewWindow: { select: { closesAt: true } },
+            participantReviews: { select: { authorUserId: true } },
+          }
+        : {}),
+    };
     return this.prisma.orm().$transaction(
       async (db) =>
         run({
@@ -112,7 +138,7 @@ export class PrismaRequestsRepository extends RequestsRepository {
           byKey: async (clientUserId, idempotencyKey) =>
             project(
               await db.serviceRequest.findUnique({
-                include,
+                include: selection,
                 where: {
                   clientUserId_idempotencyKey: { clientUserId, idempotencyKey },
                 },
@@ -120,11 +146,35 @@ export class PrismaRequestsRepository extends RequestsRepository {
             ),
           get: async (id) =>
             project(
-              await db.serviceRequest.findUnique({ where: { id }, include }),
+              await db.serviceRequest.findUnique({
+                where: { id },
+                include: selection,
+              }),
             ),
           insert: async (data) =>
-            project(await db.serviceRequest.create({ data, include }))!,
-          append: (data) => db.serviceRequestEvent.create({ data }),
+            project(
+              await db.serviceRequest.create({ data, include: selection }),
+            )!,
+          append: async (data) => {
+            const event = await db.serviceRequestEvent.create({ data });
+            if (
+              protectedReviews &&
+              data.action === "confirm-completion" &&
+              data.newStatus === "COMPLETED" &&
+              data.previousStatus === "AWAITING_CONFIRMATION"
+            ) {
+              await db.reviewWindow.create({
+                data: {
+                  requestId: data.requestId,
+                  completedAt: data.occurredAt,
+                  closesAt: new Date(
+                    data.occurredAt.getTime() + REVIEW_WINDOW_DAYS * 86400000,
+                  ),
+                },
+              });
+            }
+            return event;
+          },
           patch: async (id, status, version, data) =>
             (
               await db.serviceRequest.updateMany({
@@ -149,7 +199,7 @@ export class PrismaRequestsRepository extends RequestsRepository {
               total: await db.serviceRequest.count({ where }),
               items: (
                 await db.serviceRequest.findMany({
-                  include,
+                  include: selection,
                   where,
                   skip: (query.page - 1) * query.pageSize,
                   take: query.pageSize,

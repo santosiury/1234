@@ -10,6 +10,9 @@ datasource db {
 }
 
 model User {
+  participantReviewsWritten ParticipantReview[] @relation("ParticipantReviewAuthor")
+  participantReviewsReceived ParticipantReview[] @relation("ParticipantReviewSubject")
+  reputationBatches ReputationBatch[]
   id              String           @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
   email           String           @unique @db.NVarChar(254)
   displayName     String           @db.NVarChar(120)
@@ -142,6 +145,8 @@ model RefreshToken {
 }
 
 model ServiceRequest {
+  reviewWindow ReviewWindow?
+  participantReviews ParticipantReview[]
   review ServiceReview?
   id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
   clientUserId String @db.UniqueIdentifier
@@ -210,4 +215,48 @@ model ServiceReview {
   providerUser User @relation("ReviewProvider", fields: [providerUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   @@index([providerId, createdAt, id])
+}
+
+// New completions opt in transactionally. No window is backfilled for old requests.
+model ReviewWindow {
+  requestId String @id @db.UniqueIdentifier
+  completedAt DateTime @db.DateTime2
+  closesAt DateTime @db.DateTime2
+  releasedAt DateTime? @db.DateTime2
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@index([releasedAt, closesAt, requestId])
+}
+
+model ParticipantReview {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  requestId String @db.UniqueIdentifier
+  direction String @db.NVarChar(24)
+  authorUserId String @db.UniqueIdentifier
+  subjectUserId String @db.UniqueIdentifier
+  rating Int
+  comment String? @db.NVarChar(1000)
+  submittedAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  publishedAt DateTime? @db.DateTime2
+  isLegacy Boolean @default(false)
+  batchId String? @db.UniqueIdentifier
+  request ServiceRequest @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  author User @relation("ParticipantReviewAuthor", fields: [authorUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  subject User @relation("ParticipantReviewSubject", fields: [subjectUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  batch ReputationBatch? @relation(fields: [batchId, subjectUserId, direction], references: [id, subjectUserId, direction], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([requestId, direction])
+  @@index([subjectUserId, direction, batchId, publishedAt, id])
+}
+
+// Immutable cohorts avoid publishing one new rating at a time.
+model ReputationBatch {
+  id String @id @default(dbgenerated("newid()")) @db.UniqueIdentifier
+  subjectUserId String @db.UniqueIdentifier
+  direction String @db.NVarChar(24)
+  entryCount Int
+  distinctAuthorCount Int
+  createdAt DateTime @default(dbgenerated("sysutcdatetime()")) @db.DateTime2
+  subject User @relation(fields: [subjectUserId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  reviews ParticipantReview[]
+  @@unique([id, subjectUserId, direction])
+  @@index([subjectUserId, direction])
 }
